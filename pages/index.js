@@ -5,7 +5,6 @@ import TwitchJs from 'twitch-js'
 const enigmaPurple = '#4700ff'
 const anEternalEnigma = { userId: '20485198', username: 'aneternalenigma' }
 const ignoredUsers = { 'aneternalenigma': true, 'aneternalbot': true }
-let recordedChatters = {}
 let isRecording = false
 
 // start initialize Twitch Clients
@@ -25,7 +24,7 @@ export default function Home () {
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
 
-  const [ recordedChattersState, setRecordedChatters ] = useState({})
+  const [ recordedChatters, setRecordedChatters ] = useState({})
   const [ subbedChatters, setSubbedChatters ] = useState({})
   const [ unsubbedChatters, setUnsubbedChatters ] = useState({})
   const [ winner, setWinner ] = useState({})
@@ -38,12 +37,7 @@ export default function Home () {
     chat.connect().then(() => chat.join(anEternalEnigma.username))
 
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ username }) => {
-      console.log(1, recordedChatters)
-      // STATE IS FUCKY HERE ??
       if (isRecording && !recordedChatters[username] && !ignoredUsers[username] ) {
-        recordedChatters[username] = { username }
-        console.log(2, recordedChatters)
-
         api.get('users', { search: { login: username } })
         .then(({ data }) => {
           const userId = data.length && data[0].id
@@ -54,7 +48,6 @@ export default function Home () {
             const isUserSubbed = !!data[0]
             const newRecordedChatters = {...recordedChatters}
             newRecordedChatters[username] = { isUserSubbed, userId, username }
-            recordedChatters = newRecordedChatters
             setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
 
             if (isUserSubbed) {
@@ -93,13 +86,6 @@ export default function Home () {
       delete newUnsubbedChatters[potentialWinner.username]
       setUnsubbedChatters(newUnsubbedChatters)
     }
-  }
-
-  const updateChatterToSub = (data) => {
-    console.log('updating', data)
-    const newSubbedChatters = {...subbedChatters}
-    newSubbedChatters[username] = { isUserSubbed, userId, username }
-    setSubbedChatters(prevObject => ({...prevObject, ...newSubbedChatters}))
   }
 
   const handleDisplayChange = (e) => {
@@ -204,9 +190,9 @@ export default function Home () {
         <div>
           {Object.values(subbedChatters).map((chatter, index) =>
             <div className='row' key={index}>
-              <div>{chatter.username}</div>
-              <div>{!!chatter.isUserSubbed && 'Is Subbed!'}</div>
-            </div>
+            <div>{chatter.username}</div>
+            <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+          </div>
           )}
         </div>
       }
@@ -215,7 +201,7 @@ export default function Home () {
           {Object.values(unsubbedChatters).map((chatter, index) =>
             <div className='row' key={index}>
               <div>{chatter.username}</div>
-              <div>{!!chatter.isUserSubbed && 'Is Subbed!'}</div>
+              <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
             </div>
           )}
         </div>
