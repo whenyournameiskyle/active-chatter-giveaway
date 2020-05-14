@@ -6,7 +6,6 @@ const enigmaPurple = '#4700ff'
 const anEternalEnigma = { userId: '20485198', username: 'aneternalenigma' }
 const ignoredUsers = { 'aneternalenigma': true, 'aneternalbot': true }
 let isRecording = false
-let recordedChatters = {}
 
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
@@ -24,7 +23,7 @@ export default function Home () {
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
 
-  const [ recordedChattersState, setRecordedChatters ] = useState({})
+  const [ recordedChatters, setRecordedChatters ] = useState({})
   const [ subbedChatters, setSubbedChatters ] = useState({})
   const [ unsubbedChatters, setUnsubbedChatters ] = useState({})
   const [ winner, setWinner ] = useState({})
@@ -36,30 +35,20 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(anEternalEnigma.username))
 
-    chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ username }) => {
-      if (isRecording && !recordedChatters[username] && !ignoredUsers[username] ) {
-        api.get('users', { search: { login: username } })
-        .then(({ data }) => {
-          const userId = data.length && data[0].id
-          if (!userId) return
+    chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
+      if (isRecording && !ignoredUsers[username]) {
+        const isUserSubbed = parseInt(tags.subscriber)
+        const newRecordedChatters = {...recordedChatters}
+        newRecordedChatters[username] = { isUserSubbed, username }
+        setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
 
-          api.get('subscriptions', { search: { broadcaster_id: anEternalEnigma.userId, user_id: userId } })
-          .then(({ data }) => {
-            const isUserSubbed = !!data[0]
-            const newRecordedChatters = {...recordedChatters}
-            newRecordedChatters[username] = { isUserSubbed, userId, username }
-            recordedChatters = newRecordedChatters
-            setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
-
-            if (isUserSubbed) {
-              updateSubbedChatters({ isUserSubbed, userId, username })
-            } else {
-              const newUnsubbedChatters = {...unsubbedChatters}
-              newUnsubbedChatters[username] = { isUserSubbed, userId, username }
-              setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
-            }
-          })
-        })
+        if (isUserSubbed) {
+          updateSubbedChatters({ isUserSubbed, username })
+        } else {
+          const newUnsubbedChatters = {...unsubbedChatters}
+          newUnsubbedChatters[username] = { isUserSubbed, username }
+          setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
+        }
       }
     })
   }, [])
@@ -77,15 +66,15 @@ export default function Home () {
     setIsRecordingState(!isRecordingState)
   }
 
-  const updateSubbedChatters = ({ isUserSubbed, userId, username }) => {
+  const updateSubbedChatters = ({ isUserSubbed, username }) => {
     const newSubbedChatters = {...subbedChatters}
-    newSubbedChatters[username] = { isUserSubbed, userId, username }
+    newSubbedChatters[username] = { isUserSubbed, username }
     setSubbedChatters(prevObject => ({...prevObject, ...newSubbedChatters}))
 
     if (unsubbedChatters[username]) {
       const newUnsubbedChatters = {...unsubbedChatters}
-      delete newUnsubbedChatters[potentialWinner.username]
-      setUnsubbedChatters(newUnsubbedChatters)
+      delete newUnsubbedChatters[username]
+      setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
     }
   }
 
@@ -101,7 +90,7 @@ export default function Home () {
     setWinner({})
     setIsSelectingWinner(true)
     const chatterObjects = {
-      'allChatters': recordedChattersState,
+      'allChatters': recordedChatters,
       'nonSubsOnly': unsubbedChatters,
       'subsOnly': subbedChatters
     }
@@ -130,18 +119,23 @@ export default function Home () {
           return setWinner(potentialWinner)
         }
 
-        // if we're gifting to non-subs only double check they already haven't been gifted one tonight
-        api.get('subscriptions', { search: { broadcaster_id: anEternalEnigma.userId, user_id: potentialWinner.userId } })
+        api.get('users', { search: { login: potentialWinner.username } })
+        .then(({ data }) => {
+          const userId = data.length && data[0].id
+          if (!userId) return
+
+          api.get('subscriptions', { search: { broadcaster_id: anEternalEnigma.userId, user_id: userId } })
           .then(({ data }) => {
             const isUserSubbed = !!data[0]
             if (isUserSubbed) {
-              updateSubbedChatters({ isUserSubbed, userId: potentialWinner.userId, username: potentialWinner.username})
+              updateSubbedChatters({ isUserSubbed, username: potentialWinner.username})
               return getWinner()
             } else {
               setIsSelectingWinner(false)
               return setWinner(potentialWinner)
             }
           })
+        })
       })
   }
 
@@ -177,32 +171,12 @@ export default function Home () {
         <button onClick={toggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
-      {currentlyDisplaying === 'allChatters' &&
+      {
         <div>
-          {Object.values(recordedChattersState).map((chatter, index) =>
+          {Object.values(currentlyDisplaying === 'allChatters' ? recordedChatters : currentlyDisplaying === 'subsOnly' ? subbedChatters : unsubbedChatters).map((chatter, index) =>
             <div className='row' key={index}>
               <div>{chatter.username}</div>
-              <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-            </div>
-          )}
-        </div>
-      }
-      {currentlyDisplaying === 'subsOnly' &&
-        <div>
-          {Object.values(subbedChatters).map((chatter, index) =>
-            <div className='row' key={index}>
-            <div>{chatter.username}</div>
-            <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-          </div>
-          )}
-        </div>
-      }
-      {currentlyDisplaying === 'nonSubsOnly' &&
-        <div>
-          {Object.values(unsubbedChatters).map((chatter, index) =>
-            <div className='row' key={index}>
-              <div>{chatter.username}</div>
-              <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+              <div className={!!chatter.isUserSubbed && 'accentColor'}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
             </div>
           )}
         </div>
