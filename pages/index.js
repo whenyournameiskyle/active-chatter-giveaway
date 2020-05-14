@@ -6,6 +6,7 @@ const enigmaPurple = '#4700ff'
 const anEternalEnigma = { userId: '20485198', username: 'aneternalenigma' }
 const ignoredUsers = { 'aneternalenigma': true, 'aneternalbot': true }
 let isRecording = false
+let recordedChatters = {}
 
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
@@ -14,7 +15,6 @@ const { api } = new TwitchJs({
   clientId: '',
   token: ''
 })
-
 // end initialize Twitch Clients
 
 export default function Home () {
@@ -24,7 +24,7 @@ export default function Home () {
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
 
-  const [ recordedChatters, setRecordedChatters ] = useState({})
+  const [ recordedChattersState, setRecordedChatters ] = useState({})
   const [ subbedChatters, setSubbedChatters ] = useState({})
   const [ unsubbedChatters, setUnsubbedChatters ] = useState({})
   const [ winner, setWinner ] = useState({})
@@ -48,6 +48,7 @@ export default function Home () {
             const isUserSubbed = !!data[0]
             const newRecordedChatters = {...recordedChatters}
             newRecordedChatters[username] = { isUserSubbed, userId, username }
+            recordedChatters = newRecordedChatters
             setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
 
             if (isUserSubbed) {
@@ -100,7 +101,7 @@ export default function Home () {
     setWinner({})
     setIsSelectingWinner(true)
     const chatterObjects = {
-      'allChatters': recordedChatters,
+      'allChatters': recordedChattersState,
       'nonSubsOnly': unsubbedChatters,
       'subsOnly': subbedChatters
     }
@@ -178,7 +179,7 @@ export default function Home () {
       </div>
       {currentlyDisplaying === 'allChatters' &&
         <div>
-          {Object.values(recordedChatters).map((chatter, index) =>
+          {Object.values(recordedChattersState).map((chatter, index) =>
             <div className='row' key={index}>
               <div>{chatter.username}</div>
               <div className={!!chatter.isUserSubbed ? 'accentColor' : ''}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
