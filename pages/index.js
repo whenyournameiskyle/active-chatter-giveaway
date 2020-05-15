@@ -38,14 +38,14 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
       if (isRecording && !ignoredUsers[username]) {
         const isUserSubbed = parseInt(tags.subscriber)
-        const newRecordedChatters = {...recordedChatters}
+        let newRecordedChatters = {...recordedChatters}
         newRecordedChatters[username] = { isUserSubbed, username }
         setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
 
         if (isUserSubbed) {
           updateSubbedChatters({ isUserSubbed, username })
         } else {
-          const newUnsubbedChatters = {...unsubbedChatters}
+          let newUnsubbedChatters = {...unsubbedChatters}
           newUnsubbedChatters[username] = { isUserSubbed, username }
           setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
         }
@@ -67,12 +67,12 @@ export default function Home () {
   }
 
   const updateSubbedChatters = ({ isUserSubbed, username }) => {
-    const newSubbedChatters = {...subbedChatters}
+    let newSubbedChatters = {...subbedChatters}
     newSubbedChatters[username] = { isUserSubbed, username }
     setSubbedChatters(prevObject => ({...prevObject, ...newSubbedChatters}))
 
     if (unsubbedChatters[username]) {
-      const newUnsubbedChatters = {...unsubbedChatters}
+      let newUnsubbedChatters = {...unsubbedChatters}
       delete newUnsubbedChatters[username]
       setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
     }
@@ -141,7 +141,7 @@ export default function Home () {
 
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List</title></Head>
+      <Head> <title>Active Chatter List v2.1</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
