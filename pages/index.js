@@ -10,11 +10,6 @@ let isRecording = false
 
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
-const { api } = new TwitchJs({
-  log: { level: 'error' },
-  clientId: '',
-  token: ''
-})
 // end initialize Twitch Clients
 
 export default function Home () {
@@ -23,10 +18,10 @@ export default function Home () {
   const [ chooseWinnerFrom, setChooseWinnerFrom ] = useState('nonSubsOnly')
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
-  const [ isDisplayingCopied, setIsDisplayingCopied ] = useState(false)
+  const [ isDisplayingCopied, setIsDisplayingCopied ] = useState({})
 
   const [ recordedChattersState, setRecordedChatters ] = useState({})
-  const [ winner, setWinner ] = useState({})
+  const [ winners, setWinners ] = useState([])
   // end state hooks
 
   // start handle on mount with useEffect hook
@@ -37,7 +32,7 @@ export default function Home () {
 
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
       if (isRecording && !ignoredUsers[username]) {
-        const isUserSubbed = parseInt(tags.subscriber)
+        const isUserSubbed = parseInt(tags.subscriber) || !!tags.badges?.founder
         recordedChatters[username] = { isUserSubbed, username }
         setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
       }
@@ -47,7 +42,7 @@ export default function Home () {
 
   // start handle choose winner
   const getWinner = () => {
-    setWinner({})
+    setWinners([])
     setIsSelectingWinner(true)
     const chatterObjects = {
       'allChatters': Object.values(recordedChatters),
@@ -61,10 +56,10 @@ export default function Home () {
     if (!numberOfChatters) return setIsSelectingWinner(false)
     if (numberOfChatters < 2) {
       setIsSelectingWinner(false)
-      return setWinner(selectedChatterArray[0])
+      return setWinners([selectedChatterArray[0]])
     }
 
-    fetch(`https://www.random.org/integers/?num=1&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
+    fetch(`https://www.random.org/integers/?num=${25}&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
       {
         headers: {
           'Accept': 'application/json',
@@ -73,32 +68,16 @@ export default function Home () {
       })
       .then(response => response.text())
       .then(data => {
-        const potentialWinner = selectedChatterArray[parseInt(data)]
+        const chosenNumbers = [...new Set(data.split('\n'))]
+        let upperLimit = numberOfChatters < 10 ? Math.round(numberOfChatters/2) : 10
+        let tempWinnerArray = []
 
-        if (chooseWinnerFrom !== 'nonSubsOnly') {
-          setIsSelectingWinner(false)
-          return setWinner(potentialWinner)
-        }
-
-        api.get('users', { search: { login: potentialWinner.username } })
-        .then(({ data }) => {
-          const userId = data.length && data[0].id
-          if (!userId) return
-
-          api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
-          .then(({ data }) => {
-            const isUserSubbed = !!data[0]
-            recordedChatters[potentialWinner.username] = { isUserSubbed, username: potentialWinner.username }
-            setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
-
-            if (isUserSubbed) {
-              return getWinner()
-            } else {
-              setIsSelectingWinner(false)
-              return setWinner(potentialWinner)
-            }
-          })
+        chosenNumbers.slice(0, upperLimit).forEach(number => {
+          number && tempWinnerArray.push(selectedChatterArray[parseInt(number)])
         })
+
+        setIsSelectingWinner(false)
+        return setWinners(tempWinnerArray)
       })
   }
   // end handle choose winner
@@ -107,14 +86,16 @@ export default function Home () {
     if (window.confirm('Do you really want to clear all chatters?')) {
       recordedChatters = {}
       setRecordedChatters({})
-      setWinner({})
+      setWinners([])
     }
   }
 
   const handleCopyWinner = (username) => {
-    setIsDisplayingCopied(true)
+    setIsDisplayingCopied({ [username]: true })
     window.navigator && window.navigator.clipboard.writeText(username)
-    setTimeout(() => setIsDisplayingCopied(false), 400)
+    setTimeout(() => {
+      setIsDisplayingCopied({ [username]: false })
+    }, 500)
   }
 
   const handleDisplayChange = (e) => {
@@ -132,7 +113,7 @@ export default function Home () {
 
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List 2.2</title></Head>
+      <Head> <title>Active Chatter List 2.3</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -142,13 +123,21 @@ export default function Home () {
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='nonSubsOnlyWinner' value='nonSubsOnly' checked={chooseWinnerFrom === 'nonSubsOnly'} />
         <label htmlFor='nonSubsOnlyWinner'>Non-Subs Only</label>
       </div>
-      {!!winner.username &&
-      <div>
-        <h1>AND THE WINNER IS</h1>
-        <h2 className={isDisplayingCopied ? 'accentBackground' : 'accentColor'} onClick={() => handleCopyWinner(winner.username)}>{isDisplayingCopied ? 'Copied!' : winner.username}</h2>
-      </div>
+      {!!winners.length &&
+        <div>
+          <h1>WINNER(S):</h1>
+          {winners.map((winner, index) =>
+            <h2
+              className={isDisplayingCopied[winner.username] ? 'accentBackground' : 'accentColor'}
+              key={index}
+              onClick={() => handleCopyWinner(winner.username)}
+            >
+              {isDisplayingCopied[winner.username] ? 'Copied!' : winner.username}
+            </h2>
+          )}
+        </div>
       }
-      <button onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER'} </button>
+      <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
       <h1> Display list of: </h1>
       <div className='row'>
         <input onChange={handleDisplayChange} type='radio' name='filterChatterType' id='allChatters' value='allChatters' checked={currentlyDisplaying === 'allChatters'} />
@@ -162,24 +151,24 @@ export default function Home () {
         <button onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
-      {
-        <div>
-          {Object.values(recordedChattersState).map((chatter, index) => {
-            if ((currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
-              || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
-              || (currentlyDisplaying === 'allChatters')
+
+      <div>
+        {Object.values(recordedChattersState).map((chatter, index) => {
+          if ((currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
+            || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
+            || (currentlyDisplaying === 'allChatters')
+          )
+          {
+            return (
+              <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+                <div className='username'>{chatter.username}</div>
+                <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+              </div>
             )
-            {
-              return (
-                <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
-                  <div className='username'>{chatter.username}</div>
-                  <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-                </div>
-              )
-            }
-          })}
-        </div>
-      }
+          }
+        })}
+      </div>
+
       <style jsx>{`
         .accentBackground {
           background-color: ${accentColor};
@@ -258,7 +247,10 @@ export default function Home () {
           border: 0.5rem solid ${accentColor};
         }
         h2 {
-          padding: 1rem 0;
+          font-size: 1.4rem;
+          font-weight: 400;
+          padding: 0.5rem 0;
+          margin: 0;
         }
       `}</style>
     </div>
