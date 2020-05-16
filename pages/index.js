@@ -168,11 +168,12 @@ export default function Home () {
             if ((currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
               || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
               || (currentlyDisplaying === 'allChatters')
-            ) {
+            )
+            {
               return (
-                <div className='row' key={index}>
-                  <div>{chatter.username}</div>
-                  <div className={!!chatter.isUserSubbed && 'accentColor'}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+                <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+                  <div className='username'>{chatter.username}</div>
+                  <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
                 </div>
               )
             }
@@ -206,8 +207,19 @@ export default function Home () {
 
         .row {
           display: flex;
-          justify-content: space-between;
+          justify-content: space-evenly;
+          text-align: left;
           width: 40rem;
+        }
+
+        .rowNumber {
+          align-self: left;
+          width: 3rem;
+        }
+
+        .username {
+          flex-grow: 1;
+          margin-left: 2rem;
         }
       `}</style>
       <style jsx global>{`
