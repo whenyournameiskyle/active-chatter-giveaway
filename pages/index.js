@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import TwitchJs from 'twitch-js'
 
-const enigmaPurple = '#4700ff'
-const anEternalEnigma = { userId: '20485198', username: 'aneternalenigma' }
+const accentColor = '#4700ff'
+const baseChannel = { userId: '20485198', username: 'aneternalenigma' }
 const ignoredUsers = { 'aneternalenigma': true, 'aneternalbot': true }
+let recordedChatters = {  }
 let isRecording = false
 
 // start initialize Twitch Clients
@@ -22,10 +23,9 @@ export default function Home () {
   const [ chooseWinnerFrom, setChooseWinnerFrom ] = useState('nonSubsOnly')
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
+  const [ isDisplayingCopied, setIsDisplayingCopied ] = useState(false)
 
-  const [ recordedChatters, setRecordedChatters ] = useState({})
-  const [ subbedChatters, setSubbedChatters ] = useState({})
-  const [ unsubbedChatters, setUnsubbedChatters ] = useState({})
+  const [ recordedChattersState, setRecordedChatters ] = useState({})
   const [ winner, setWinner ] = useState({})
   // end state hooks
 
@@ -33,74 +33,35 @@ export default function Home () {
   useEffect(() => {
     chat.removeAllListeners()
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
-    chat.connect().then(() => chat.join(anEternalEnigma.username))
+    chat.connect().then(() => chat.join(baseChannel.username))
 
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
       if (isRecording && !ignoredUsers[username]) {
         const isUserSubbed = parseInt(tags.subscriber)
-        let newRecordedChatters = {...recordedChatters}
-        newRecordedChatters[username] = { isUserSubbed, username }
-        setRecordedChatters(prevObject => ({...prevObject, ...newRecordedChatters}))
-
-        if (isUserSubbed) {
-          updateSubbedChatters({ isUserSubbed, username })
-        } else {
-          let newUnsubbedChatters = {...unsubbedChatters}
-          newUnsubbedChatters[username] = { isUserSubbed, username }
-          setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
-        }
+        recordedChatters[username] = { isUserSubbed, username }
+        setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
       }
     })
   }, [])
   // end handle on mount with useEffect hook
 
-  const clearChatters = () => {
-    setRecordedChatters({})
-    setSubbedChatters({})
-    setUnsubbedChatters({})
-    setWinner({})
-  }
-
-  const toggleIsRecording = () => {
-    isRecording = !isRecording
-    setIsRecordingState(!isRecordingState)
-  }
-
-  const updateSubbedChatters = ({ isUserSubbed, username }) => {
-    let newSubbedChatters = {...subbedChatters}
-    newSubbedChatters[username] = { isUserSubbed, username }
-    setSubbedChatters(prevObject => ({...prevObject, ...newSubbedChatters}))
-
-    if (unsubbedChatters[username]) {
-      let newUnsubbedChatters = {...unsubbedChatters}
-      delete newUnsubbedChatters[username]
-      setUnsubbedChatters(prevObject => ({...prevObject, ...newUnsubbedChatters}))
-    }
-  }
-
-  const handleDisplayChange = (e) => {
-    setIsCurrentlyDisplaying(e.target.value)
-  }
-
-  const handleWinnerChange = (e) => {
-    setChooseWinnerFrom(e.target.value)
-  }
-
+  // start handle choose winner
   const getWinner = () => {
     setWinner({})
     setIsSelectingWinner(true)
     const chatterObjects = {
-      'allChatters': recordedChatters,
-      'nonSubsOnly': unsubbedChatters,
-      'subsOnly': subbedChatters
+      'allChatters': Object.values(recordedChatters),
+      'nonSubsOnly': Object.values(recordedChatters).filter(chatter => !chatter.isUserSubbed),
+      'subsOnly': Object.values(recordedChatters).filter(chatter => !!chatter.isUserSubbed),
     }
-    const selectedChatterObject = chatterObjects[chooseWinnerFrom]
-    const numberOfChatters = Object.keys(selectedChatterObject).length
+
+    const selectedChatterArray = chatterObjects[chooseWinnerFrom]
+    const numberOfChatters = selectedChatterArray.length
 
     if (!numberOfChatters) return setIsSelectingWinner(false)
     if (numberOfChatters < 2) {
       setIsSelectingWinner(false)
-      return setWinner(Object.values(selectedChatterObject)[0])
+      return setWinner(selectedChatterArray[0])
     }
 
     fetch(`https://www.random.org/integers/?num=1&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
@@ -112,7 +73,7 @@ export default function Home () {
       })
       .then(response => response.text())
       .then(data => {
-        const potentialWinner = Object.values(selectedChatterObject)[parseInt(data)]
+        const potentialWinner = selectedChatterArray[parseInt(data)]
 
         if (chooseWinnerFrom !== 'nonSubsOnly') {
           setIsSelectingWinner(false)
@@ -124,11 +85,13 @@ export default function Home () {
           const userId = data.length && data[0].id
           if (!userId) return
 
-          api.get('subscriptions', { search: { broadcaster_id: anEternalEnigma.userId, user_id: userId } })
+          api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
           .then(({ data }) => {
             const isUserSubbed = !!data[0]
+            recordedChatters[potentialWinner.username] = { isUserSubbed, username: potentialWinner.username }
+            setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
+
             if (isUserSubbed) {
-              updateSubbedChatters({ isUserSubbed, username: potentialWinner.username})
               return getWinner()
             } else {
               setIsSelectingWinner(false)
@@ -138,10 +101,38 @@ export default function Home () {
         })
       })
   }
+  // end handle choose winner
+
+  const clearChatters = () => {
+    if (window.confirm('Do you really want to clear all chatters?')) {
+      recordedChatters = {}
+      setRecordedChatters({})
+      setWinner({})
+    }
+  }
+
+  const handleCopyWinner = (username) => {
+    setIsDisplayingCopied(true)
+    window.navigator && window.navigator.clipboard.writeText(username)
+    setTimeout(() => setIsDisplayingCopied(false), 400)
+  }
+
+  const handleDisplayChange = (e) => {
+    setIsCurrentlyDisplaying(e.target.value)
+  }
+
+  const handleWinnerChange = (e) => {
+    setChooseWinnerFrom(e.target.value)
+  }
+
+  const handleToggleIsRecording = () => {
+    isRecording = !isRecording
+    setIsRecordingState(!isRecordingState)
+  }
 
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List v2.1</title></Head>
+      <Head> <title>Active Chatter List 2.2</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -154,7 +145,7 @@ export default function Home () {
       {!!winner.username &&
       <div>
         <h1>AND THE WINNER IS</h1>
-        <h2 className='accentColor'>{winner.username}</h2>
+        <h2 className={isDisplayingCopied ? 'accentBackground' : 'accentColor'} onClick={() => handleCopyWinner(winner.username)}>{isDisplayingCopied ? 'Copied!' : winner.username}</h2>
       </div>
       }
       <button onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER'} </button>
@@ -168,22 +159,34 @@ export default function Home () {
         <label htmlFor='nonSubsOnly'>Non-Subs Only</label>
       </div>
       <div className='buttonRow'>
-        <button onClick={toggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
+        <button onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
       {
         <div>
-          {Object.values(currentlyDisplaying === 'allChatters' ? recordedChatters : currentlyDisplaying === 'subsOnly' ? subbedChatters : unsubbedChatters).map((chatter, index) =>
-            <div className='row' key={index}>
-              <div>{chatter.username}</div>
-              <div className={!!chatter.isUserSubbed && 'accentColor'}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-            </div>
-          )}
+          {Object.values(recordedChattersState).map((chatter, index) => {
+            if ((currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
+              || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
+              || (currentlyDisplaying === 'allChatters')
+            ) {
+              return (
+                <div className='row' key={index}>
+                  <div>{chatter.username}</div>
+                  <div className={!!chatter.isUserSubbed && 'accentColor'}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+                </div>
+              )
+            }
+          })}
         </div>
       }
       <style jsx>{`
+        .accentBackground {
+          background-color: ${accentColor};
+          color: black;
+        }
+
         .accentColor {
-          color: ${enigmaPurple};
+          color: ${accentColor};
         }
 
         .container {
@@ -219,7 +222,7 @@ export default function Home () {
             sans-serif;
         }
         button {
-          background-color: ${enigmaPurple};
+          background-color: ${accentColor};
           border: none;
           color: black;
           cursor: pointer;
@@ -240,7 +243,10 @@ export default function Home () {
 
         }
         input:checked {
-          border: 0.5rem solid ${enigmaPurple};
+          border: 0.5rem solid ${accentColor};
+        }
+        h2 {
+          padding: 1rem 0;
         }
       `}</style>
     </div>
