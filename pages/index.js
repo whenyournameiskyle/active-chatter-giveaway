@@ -153,20 +153,17 @@ export default function Home () {
       </div>
 
       <div>
-        {Object.values(recordedChattersState).map((chatter, index) => {
-          if ((currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
-            || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
-            || (currentlyDisplaying === 'allChatters')
+        {Object.values(recordedChattersState).filter((chatter) =>
+          (currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
+          || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
+          || (currentlyDisplaying === 'allChatters')
+        ).map((chatter, index) => (
+            <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+              <div className='username'>{chatter.username}</div>
+              <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+            </div>
           )
-          {
-            return (
-              <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
-                <div className='username'>{chatter.username}</div>
-                <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-              </div>
-            )
-          }
-        })}
+        )}
       </div>
 
       <style jsx>{`
