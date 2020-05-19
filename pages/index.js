@@ -4,12 +4,24 @@ import TwitchJs from 'twitch-js'
 
 const accentColor = '#4700ff'
 const baseChannel = { userId: '20485198', username: 'aneternalenigma' }
-const ignoredUsers = { 'aneternalenigma': true, 'aneternalbot': true }
+const ignoredUsers = {
+  'aneternalenigma': true,
+  'ananonymouscheerer': true,
+  'aneternalbot': true,
+  'streamelements': true,
+  'nightbot': true,
+  'moobot': true
+}
 let recordedChatters = {  }
 let isRecording = false
 
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
+const { api } = new TwitchJs({
+  log: { level: 'error' },
+  clientId: '',
+  token: ''
+})
 // end initialize Twitch Clients
 
 export default function Home () {
@@ -33,16 +45,20 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
       if (isRecording && !ignoredUsers[username]) {
         const isUserSubbed = parseInt(tags.subscriber) || !!tags.badges?.founder
-        recordedChatters[username] = { isUserSubbed, username }
-        setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
+        updateRecordedChatters(isUserSubbed, username)
       }
     })
   }, [])
   // end handle on mount with useEffect hook
 
+
+  const updateRecordedChatters = (isUserSubbed, username) => {
+    recordedChatters[username] = { isUserSubbed, username }
+    setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
+  }
+
   // start handle choose winner
   const getWinner = () => {
-    setWinners([])
     setIsSelectingWinner(true)
     const chatterObjects = {
       'allChatters': Object.values(recordedChatters),
@@ -56,10 +72,10 @@ export default function Home () {
     if (!numberOfChatters) return setIsSelectingWinner(false)
     if (numberOfChatters < 2) {
       setIsSelectingWinner(false)
-      return setWinners([selectedChatterArray[0]])
+      return setWinners([selectedChatterArray[0].username])
     }
 
-    fetch(`https://www.random.org/integers/?num=${25}&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
+    fetch(`https://www.random.org/integers/?num=1&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
       {
         headers: {
           'Accept': 'application/json',
@@ -67,20 +83,53 @@ export default function Home () {
         }
       })
       .then(response => response.text())
-      .then(data => {
-        const chosenNumbers = [...new Set(data.split('\n'))]
-        let upperLimit = numberOfChatters < 10 ? Math.round(numberOfChatters/2) : 10
-        let tempWinnerArray = []
+      .then(async data => {
+        const potentialWinner = selectedChatterArray[parseInt(data)] && selectedChatterArray[parseInt(data)].username
+        let tempWinnerArray = [...winners]
+        if (tempWinnerArray.includes(potentialWinner)) {
+          return getWinner()
+        }
 
-        chosenNumbers.slice(0, upperLimit).forEach(number => {
-          number && tempWinnerArray.push(selectedChatterArray[parseInt(number)])
-        })
-
+        if (chooseWinnerFrom === 'nonSubsOnly') {
+          const isUserSubbed = await checkIsSub(potentialWinner)
+          if (isUserSubbed) {
+            updateRecordedChatters(isUserSubbed, potentialWinner)
+            return getWinner()
+          }
+        }
+        tempWinnerArray.push(potentialWinner)
         setIsSelectingWinner(false)
         return setWinners(tempWinnerArray)
       })
   }
   // end handle choose winner
+
+
+  // start api check is sub
+  const checkIsSub = (username) => {
+    return api.get('users', { search: { login: username } })
+        .then(({ data }) => {
+          const userId = data.length && data[0].id
+          if (!userId) return
+
+          return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
+          .then(({ data }) => {
+            const isUserSubbed = !!data[0]
+            if (isUserSubbed) {
+              return true
+            } else {
+              return false
+            }
+          })
+        })
+  }
+  // end api check is sub
+
+  const clearWinners = () => {
+    if (window.confirm('Do you really want to clear the list of winners?')) {
+      setWinners([])
+    }
+  }
 
   const clearChatters = () => {
     if (window.confirm('Do you really want to clear all chatters?')) {
@@ -113,7 +162,7 @@ export default function Home () {
 
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List 2.3</title></Head>
+      <Head> <title>Active Chatter List v3.0.0</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -128,16 +177,19 @@ export default function Home () {
           <h1>WINNER(S):</h1>
           {winners.map((winner, index) =>
             <h2
-              className={isDisplayingCopied[winner.username] ? 'accentBackground' : 'accentColor'}
+              className={isDisplayingCopied[winner] ? 'accentBackground' : 'accentColor'}
               key={index}
-              onClick={() => handleCopyWinner(winner.username)}
+              onClick={() => handleCopyWinner(winner)}
             >
-              {isDisplayingCopied[winner.username] ? 'Copied!' : winner.username}
+              {isDisplayingCopied[winner] ? 'Copied!' : winner}
             </h2>
           )}
         </div>
       }
-      <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
+      <div className='buttonRow'>
+        <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
+        <button onClick={clearWinners}>CLEAR WINNERS</button>
+      </div>
       <h1> Display list of: </h1>
       <div className='row'>
         <input onChange={handleDisplayChange} type='radio' name='filterChatterType' id='allChatters' value='allChatters' checked={currentlyDisplaying === 'allChatters'} />
