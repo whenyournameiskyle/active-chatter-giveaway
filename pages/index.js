@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import TwitchJs from 'twitch-js'
-
 const accentColor = '#4700ff'
 const baseChannel = { userId: '20485198', username: 'aneternalenigma' }
 const ignoredUsers = {
@@ -14,7 +13,6 @@ const ignoredUsers = {
 }
 let recordedChatters = {  }
 let isRecording = false
-
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
 const { api } = new TwitchJs({
@@ -23,7 +21,6 @@ const { api } = new TwitchJs({
   token: ''
 })
 // end initialize Twitch Clients
-
 export default function Home () {
   // start state hooks
   const [ currentlyDisplaying, setIsCurrentlyDisplaying ] = useState('allChatters')
@@ -31,17 +28,14 @@ export default function Home () {
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
   const [ isDisplayingCopied, setIsDisplayingCopied ] = useState({})
-
   const [ recordedChattersState, setRecordedChatters ] = useState({})
   const [ winners, setWinners ] = useState([])
   // end state hooks
-
   // start handle on mount with useEffect hook
   useEffect(() => {
     chat.removeAllListeners()
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
-
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
       if (isRecording && !ignoredUsers[username]) {
         const isUserSubbed = parseInt(tags.subscriber) || !!tags.badges?.founder
@@ -50,13 +44,10 @@ export default function Home () {
     })
   }, [])
   // end handle on mount with useEffect hook
-
-
   const updateRecordedChatters = (isUserSubbed, username) => {
     recordedChatters[username] = { isUserSubbed, username }
     setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
   }
-
   // start handle choose winner
   const getWinner = () => {
     setIsSelectingWinner(true)
@@ -65,16 +56,13 @@ export default function Home () {
       'nonSubsOnly': Object.values(recordedChatters).filter(chatter => !chatter.isUserSubbed),
       'subsOnly': Object.values(recordedChatters).filter(chatter => !!chatter.isUserSubbed),
     }
-
     const selectedChatterArray = chatterObjects[chooseWinnerFrom]
     const numberOfChatters = selectedChatterArray.length
-
     if (!numberOfChatters) return setIsSelectingWinner(false)
     if (numberOfChatters < 2) {
       setIsSelectingWinner(false)
       return setWinners([selectedChatterArray[0].username])
     }
-
     fetch(`https://www.random.org/integers/?num=1&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
       {
         headers: {
@@ -89,7 +77,6 @@ export default function Home () {
         if (tempWinnerArray.includes(potentialWinner)) {
           return getWinner()
         }
-
         if (chooseWinnerFrom === 'nonSubsOnly') {
           const isUserSubbed = await checkIsSub(potentialWinner)
           if (isUserSubbed) {
@@ -103,8 +90,6 @@ export default function Home () {
       })
   }
   // end handle choose winner
-
-
   // start api check is sub
   const checkIsSub = (username) => {
     if (!api || !username) return
@@ -112,7 +97,6 @@ export default function Home () {
         .then(({ data }) => {
           const userId = data.length && data[0].id
           if (!userId) return
-
           return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
           .then(({ data }) => {
             const isUserSubbed = !!data[0]
@@ -125,13 +109,11 @@ export default function Home () {
         })
   }
   // end api check is sub
-
   const clearWinners = () => {
     if (window.confirm('Do you really want to clear the list of winners?')) {
       setWinners([])
     }
   }
-
   const clearChatters = () => {
     if (window.confirm('Do you really want to clear all chatters?')) {
       recordedChatters = {}
@@ -139,7 +121,6 @@ export default function Home () {
       setWinners([])
     }
   }
-
   const handleCopyWinner = (username) => {
     setIsDisplayingCopied({ [username]: true })
     window.navigator && window.navigator.clipboard.writeText(username)
@@ -147,20 +128,16 @@ export default function Home () {
       setIsDisplayingCopied({ [username]: false })
     }, 500)
   }
-
   const handleDisplayChange = (e) => {
     setIsCurrentlyDisplaying(e.target.value)
   }
-
   const handleWinnerChange = (e) => {
     setChooseWinnerFrom(e.target.value)
   }
-
   const handleToggleIsRecording = () => {
     isRecording = !isRecording
     setIsRecordingState(!isRecordingState)
   }
-
   return (
     <div className='container'>
       <Head> <title>Active Chatter List v3.0.0</title></Head>
@@ -204,7 +181,6 @@ export default function Home () {
         <button onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
-
       <div>
         {Object.values(recordedChattersState).filter((chatter) =>
           (currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
@@ -218,17 +194,14 @@ export default function Home () {
           )
         )}
       </div>
-
       <style jsx>{`
         .accentBackground {
           background-color: ${accentColor};
           color: black;
         }
-
         .accentColor {
           color: ${accentColor};
         }
-
         .container {
           align-items: center;
           display: flex;
@@ -237,25 +210,21 @@ export default function Home () {
           min-height: 100vh;
           text-align: center;
         }
-
         .buttonRow {
           display: flex;
           justify-content: center;
           width: 40rem;
         }
-
         .row {
           display: flex;
           justify-content: space-evenly;
           text-align: left;
           width: 40rem;
         }
-
         .rowNumber {
           align-self: left;
           width: 3rem;
         }
-
         .username {
           flex-grow: 1;
           margin-left: 2rem;
@@ -291,7 +260,6 @@ export default function Home () {
           cursor: pointer;
           height: 1.5rem;
           width: 1.5rem;
-
         }
         input:checked {
           border: 0.5rem solid ${accentColor};
