@@ -107,6 +107,7 @@ export default function Home () {
 
   // start api check is sub
   const checkIsSub = (username) => {
+    if (!api || !username) return
     return api.get('users', { search: { login: username } })
         .then(({ data }) => {
           const userId = data.length && data[0].id
