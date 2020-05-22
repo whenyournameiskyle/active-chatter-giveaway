@@ -154,13 +154,15 @@ export default function Home () {
         <div>
           <h1>WINNER(S):</h1>
           {winners.map((winner, index) =>
-            <h2
-              className={isDisplayingCopied[winner] ? 'accentBackground' : 'accentColor'}
-              key={index}
-              onClick={() => handleCopyWinner(winner)}
-            >
-              {isDisplayingCopied[winner] ? 'Copied!' : winner}
-            </h2>
+            <div className='row thin winner' key={index}>
+              <div className='rowNumber'>{index + 1}.</div>
+              <div
+                className={isDisplayingCopied[winner] ? 'accentBackground' : 'accentColor'}
+                onClick={() => handleCopyWinner(winner)}
+              >
+                {isDisplayingCopied[winner] ? 'Copied!' : winner}
+              </div>
+            </div>
           )}
         </div>
       }
@@ -216,6 +218,7 @@ export default function Home () {
           width: 40rem;
         }
         .row {
+          align-items: center;
           display: flex;
           justify-content: space-evenly;
           text-align: left;
@@ -223,11 +226,18 @@ export default function Home () {
         }
         .rowNumber {
           align-self: left;
+          flex-grow: 1;
           width: 3rem;
+        }
+        .thin {
+          width: 30rem;
         }
         .username {
           flex-grow: 1;
           margin-left: 2rem;
+        }
+        .winner {
+          font-size: 1.6rem;
         }
       `}</style>
       <style jsx global>{`
