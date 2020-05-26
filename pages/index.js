@@ -42,11 +42,18 @@ export default function Home () {
         updateRecordedChatters(isUserSubbed, username)
       }
     })
+    const restored = window.localStorage.getItem('recordedChattersBackup')
+    if (!!restored) {
+      const parsedRestored = JSON.parse(restored)
+      recordedChatters = parsedRestored
+      setRecordedChatters(prevObject => ({...prevObject, ...parsedRestored}))
+    }
   }, [])
   // end handle on mount with useEffect hook
   const updateRecordedChatters = (isUserSubbed, username) => {
     recordedChatters[username] = { isUserSubbed, username }
     setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
+    window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
   }
   // start handle choose winner
   const getWinner = () => {
@@ -94,19 +101,19 @@ export default function Home () {
   const checkIsSub = (username) => {
     if (!api || !username) return
     return api.get('users', { search: { login: username } })
+      .then(({ data }) => {
+        const userId = data.length && data[0].id
+        if (!userId) return
+        return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
         .then(({ data }) => {
-          const userId = data.length && data[0].id
-          if (!userId) return
-          return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
-          .then(({ data }) => {
-            const isUserSubbed = !!data[0]
-            if (isUserSubbed) {
-              return true
-            } else {
-              return false
-            }
-          })
+          const isUserSubbed = !!data[0]
+          if (isUserSubbed) {
+            return true
+          } else {
+            return false
+          }
         })
+      })
   }
   // end api check is sub
   const clearWinners = () => {
@@ -119,6 +126,7 @@ export default function Home () {
       recordedChatters = {}
       setRecordedChatters({})
       setWinners([])
+      window.localStorage.removeItem('recordedChattersBackup')
     }
   }
   const handleCopyWinner = (username) => {
@@ -140,7 +148,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List v3.0.0</title></Head>
+      <Head> <title>Active Chatter List v3.1.0</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
