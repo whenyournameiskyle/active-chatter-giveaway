@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import TwitchJs from 'twitch-js'
 const accentColor = '#4700ff'
-const baseChannel = { userId: '20485198', username: 'aneternalenigma' }
+const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
-  'aneternalenigma': true,
-  'ananonymouscheerer': true,
-  'aneternalbot': true,
-  'streamelements': true,
+  'AnEternalEnigma': true,
+  'AnAnonymousCheerer': true,
+  'AnEternalBot': true,
+  'StreamElements': true,
+  'moobot': true,
+  'Moobot': true,
   'nightbot': true,
-  'moobot': true
+  'Nightbot': true
 }
 let recordedChatters = {  }
 let isRecording = false
@@ -36,10 +38,11 @@ export default function Home () {
     chat.removeAllListeners()
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
-    chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags, username }) => {
-      if (isRecording && !ignoredUsers[username]) {
-        const isUserSubbed = parseInt(tags.subscriber) || !!tags.badges?.founder
-        updateRecordedChatters(isUserSubbed, username)
+    chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags }) => {
+      const { badges, displayName, subscriber } = tags
+      if (isRecording && !ignoredUsers[displayName]) {
+        const isUserSubbed = parseInt(subscriber) || !!badges?.founder
+        updateRecordedChatters(isUserSubbed, displayName)
       }
     })
     const restored = window.localStorage.getItem('recordedChattersBackup')
@@ -148,7 +151,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List v3.1.0</title></Head>
+      <Head> <title>Active Chatter List v3.1.1</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
