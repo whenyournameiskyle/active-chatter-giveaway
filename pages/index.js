@@ -39,24 +39,39 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags }) => {
-      const { badges, displayName, subscriber } = tags
-      if (isRecording && !ignoredUsers[displayName]) {
-        const isUserSubbed = parseInt(subscriber) || !!badges?.founder
-        updateRecordedChatters(isUserSubbed, displayName)
-      }
+      const { badges, displayName, subscriber, userId } = tags
+      const isUserSubbed = parseInt(subscriber) || !!badges?.founder
+      updateRecordedChatters(isUserSubbed, displayName, userId)
     })
+    chat.on(TwitchJs.Chat.Events.RESUBSCRIPTION, ({ tags }) => {
+      const { displayName, userId } = tags
+      updateRecordedChatters(true, displayName, userId)
+    })
+    chat.on(TwitchJs.Chat.Events.SUBSCRIPTION, ({ tags }) => {
+      const { displayName, userId } = tags
+      updateRecordedChatters(true, displayName, userId)
+    })
+    chat.on(TwitchJs.Chat.Events.SUBSCRIPTION_GIFT, ({ tags }) => {
+      const { msgParamRecipientDisplayName, msgParamRecipientId } = tags
+      updateRecordedChatters(true, msgParamRecipientDisplayName, msgParamRecipientId)
+    })
+    // start restore localStorage
     const restored = window.localStorage.getItem('recordedChattersBackup')
     if (!!restored) {
       const parsedRestored = JSON.parse(restored)
       recordedChatters = parsedRestored
       setRecordedChatters(prevObject => ({...prevObject, ...parsedRestored}))
     }
+    // end restore localStorage
   }, [])
   // end handle on mount with useEffect hook
-  const updateRecordedChatters = (isUserSubbed, username) => {
-    recordedChatters[username] = { isUserSubbed, username }
-    setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
-    window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
+  const updateRecordedChatters = (isUserSubbed, username, userId) => {
+    if (isRecording && !ignoredUsers[username]) {
+      const lowercaseUsername = username.toLowerCase()
+      recordedChatters[lowercaseUsername] = { isUserSubbed, username, userId }
+      setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
+      window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
+    }
   }
   // start handle choose winner
   const getWinner = () => {
@@ -82,40 +97,35 @@ export default function Home () {
       })
       .then(response => response.text())
       .then(async data => {
-        const potentialWinner = selectedChatterArray[parseInt(data)] && selectedChatterArray[parseInt(data)].username
+        const potentialWinner = selectedChatterArray[parseInt(data)]
         let tempWinnerArray = [...winners]
-        if (tempWinnerArray.includes(potentialWinner)) {
+        if (tempWinnerArray.includes(potentialWinner.username)) {
           return getWinner()
         }
         if (chooseWinnerFrom === 'nonSubsOnly') {
-          const isUserSubbed = await checkIsSub(potentialWinner)
+          const isUserSubbed = await checkIsSub(potentialWinner.userId)
           if (isUserSubbed) {
-            updateRecordedChatters(isUserSubbed, potentialWinner)
+            updateRecordedChatters(isUserSubbed, potentialWinner.username, potentialWinner.userId)
             return getWinner()
           }
         }
-        tempWinnerArray.push(potentialWinner)
+        tempWinnerArray.push(potentialWinner.username)
         setIsSelectingWinner(false)
         return setWinners(tempWinnerArray)
       })
   }
   // end handle choose winner
   // start api check is sub
-  const checkIsSub = (username) => {
-    if (!api || !username) return
-    return api.get('users', { search: { login: username } })
+  const checkIsSub = (userId) => {
+    if (!api || !userId) return
+    return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
       .then(({ data }) => {
-        const userId = data.length && data[0].id
-        if (!userId) return
-        return api.get('subscriptions', { search: { broadcaster_id: baseChannel.userId, user_id: userId } })
-        .then(({ data }) => {
-          const isUserSubbed = !!data[0]
-          if (isUserSubbed) {
-            return true
-          } else {
-            return false
-          }
-        })
+        const isUserSubbed = !!data[0]
+        if (isUserSubbed) {
+          return true
+        } else {
+          return false
+        }
       })
   }
   // end api check is sub
@@ -151,7 +161,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head> <title>Active Chatter List v3.1.1</title></Head>
+      <Head><title>Active Chatter List v3.2.0</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
