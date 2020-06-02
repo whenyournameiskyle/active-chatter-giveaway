@@ -55,6 +55,12 @@ export default function Home () {
       const { msgParamRecipientDisplayName, msgParamRecipientId } = tags
       updateRecordedChatters(true, msgParamRecipientDisplayName, msgParamRecipientId)
     })
+    chat.on(TwitchJs.Chat.Events.USER_BANNED, ({ username }) => {
+      ignoredUsers[username] = true
+      delete recordedChatters[username]
+      setRecordedChatters(() => ({...recordedChatters}))
+      window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
+    })
     // start restore localStorage
     const restored = window.localStorage.getItem('recordedChattersBackup')
     if (!!restored) {
@@ -161,7 +167,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.2.0</title></Head>
+      <Head><title>Active Chatter List v3.3.0</title></Head>
       <h1> Choose Winner From: </h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
