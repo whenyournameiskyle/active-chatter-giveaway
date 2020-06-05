@@ -53,7 +53,9 @@ export default function Home () {
     })
     chat.on(TwitchJs.Chat.Events.SUBSCRIPTION_GIFT, ({ tags }) => {
       const { msgParamRecipientDisplayName, msgParamRecipientId } = tags
-      updateRecordedChatters(true, msgParamRecipientDisplayName, msgParamRecipientId)
+      if (recordedChatters[msgParamRecipientDisplayName.toLowerCase()]) {
+        updateRecordedChatters(true, msgParamRecipientDisplayName, msgParamRecipientId)
+      }
     })
     chat.on(TwitchJs.Chat.Events.USER_BANNED, ({ username }) => {
       ignoredUsers[username] = true
@@ -167,8 +169,8 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.3.0</title></Head>
-      <h1> Choose Winner From: </h1>
+      <Head><title>Active Chatter List v3.3.1</title></Head>
+      <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
         <label htmlFor='allChattersWinner'>All Chatters</label>
