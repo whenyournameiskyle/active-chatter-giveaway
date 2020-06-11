@@ -30,6 +30,7 @@ export default function Home () {
   const [ isRecordingState, setIsRecordingState ] = useState(isRecording)
   const [ isSelectingWinner, setIsSelectingWinner ] = useState(false)
   const [ isDisplayingCopied, setIsDisplayingCopied ] = useState({})
+  const [ numberOfWinners, setNumberOfWinners ] = useState('1')
   const [ recordedChattersState, setRecordedChatters ] = useState({})
   const [ winners, setWinners ] = useState([])
   // end state hooks
@@ -81,8 +82,9 @@ export default function Home () {
       window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
     }
   }
+  let count = 0
   // start handle choose winner
-  const getWinner = () => {
+  const getWinner = async () => {
     setIsSelectingWinner(true)
     const chatterObjects = {
       'allChatters': Object.values(recordedChatters),
@@ -96,31 +98,39 @@ export default function Home () {
       setIsSelectingWinner(false)
       return setWinners([selectedChatterArray[0].username])
     }
-    fetch(`https://www.random.org/integers/?num=1&min=0&max=${numberOfChatters - 1}&col=1&base=10&format=plain`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(response => response.text())
-      .then(async data => {
-        const potentialWinner = selectedChatterArray[parseInt(data)]
-        let tempWinnerArray = [...winners]
-        if (tempWinnerArray.includes(potentialWinner.username)) {
-          return getWinner()
-        }
-        if (chooseWinnerFrom === 'nonSubsOnly') {
-          const isUserSubbed = await checkIsSub(potentialWinner.userId)
-          if (isUserSubbed) {
-            updateRecordedChatters(isUserSubbed, potentialWinner.username, potentialWinner.userId)
-            return getWinner()
-          }
-        }
-        tempWinnerArray.push(potentialWinner.username)
-        setIsSelectingWinner(false)
-        return setWinners(tempWinnerArray)
-      })
+    const potentialWinnerIndex = await fetchWinner(numberOfChatters-1)
+    const potentialWinner = (selectedChatterArray[potentialWinnerIndex])
+    if (chooseWinnerFrom === 'nonSubsOnly') {
+      const isUserSubbed = await checkIsSub(potentialWinner.userId)
+      if (isUserSubbed) {
+        updateRecordedChatters(isUserSubbed, potentialWinner.username, potentialWinner.userId)
+        return getWinner()
+      }
+    }
+    setWinners((previousWinners) => {
+      if (previousWinners.includes(potentialWinner.username)) {
+        return [...previousWinners]
+      }
+      count += 1
+      return [...previousWinners, ...[potentialWinner.username]]
+    })
+    if (count < numberOfWinners) {
+      return getWinner()
+    }
+    return setIsSelectingWinner(false)
+  }
+  const fetchWinner = (max) => {
+    return fetch(`https://www.random.org/integers/?num=1&min=0&max=${max}&col=1&base=10&format=plain`,
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.text())
+    .then(async data => {
+      return parseInt(data)
+    })
   }
   // end handle choose winner
   // start api check is sub
@@ -163,13 +173,16 @@ export default function Home () {
   const handleWinnerChange = (e) => {
     setChooseWinnerFrom(e.target.value)
   }
+  const handleWinnerCountChange = (e) => {
+    setNumberOfWinners(e.target.value)
+  }
   const handleToggleIsRecording = () => {
     isRecording = !isRecording
     setIsRecordingState(!isRecordingState)
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.3.1</title></Head>
+      <Head><title>Active Chatter List v3.4.0</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -195,6 +208,11 @@ export default function Home () {
           )}
         </div>
       }
+      <span>
+        Winners to Choose:
+        <input className='winnerCount' onChange={handleWinnerCountChange} type='number' value={numberOfWinners}
+        />
+      </span>
       <div className='buttonRow'>
         <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
         <button onClick={clearWinners}>CLEAR WINNERS</button>
@@ -268,6 +286,10 @@ export default function Home () {
         .winner {
           font-size: 1.6rem;
         }
+        .winnerCount {
+          border-radius: 0;
+          width: 5rem;
+        }
       `}</style>
       <style jsx global>{`
         body, html {
@@ -287,8 +309,8 @@ export default function Home () {
           cursor: pointer;
           font-size: 1.2rem;
           font-weight: 600;
-          margin: 3rem 1rem;
-          padding: 1rem;
+          margin: 1rem;
+          padding: 1.5rem;
         }
         input {
           -webkit-appearance: none;
@@ -298,10 +320,26 @@ export default function Home () {
           border-radius: 50%;
           cursor: pointer;
           height: 1.5rem;
+          margin: 1rem;
+          padding: 0.5rem;
           width: 1.5rem;
         }
         input:checked {
           border: 0.5rem solid ${accentColor};
+        }
+        /* Chrome, Safari, Edge, Opera */
+          input::-webkit-outer-spin-button,
+          input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+
+          /* Firefox */
+          input[type=number] {
+            -moz-appearance: textfield;
+          }
+        h1 {
+          margin: 0;
         }
         h2 {
           font-size: 1.4rem;
