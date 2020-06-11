@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import TwitchJs from 'twitch-js'
-const accentColor = '#4700ff'
+// start environment variables
+const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
+// end environment variables
+const accentColor = isDevelopment ? 'deeppink' : '#4700ff'
 const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
   'AnEternalEnigma': true,
@@ -14,7 +17,7 @@ const ignoredUsers = {
   'Nightbot': true
 }
 let recordedChatters = {  }
-let isRecording = false
+let isRecording = isDevelopment ? true : false
 // start initialize Twitch Clients
 const { chat } = new TwitchJs({ log: { level: 'silent' }})
 const { api } = new TwitchJs({
@@ -182,7 +185,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.4.0</title></Head>
+      <Head><title>Active Chatter List v3.4.1</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -196,24 +199,23 @@ export default function Home () {
         <div>
           <h1>WINNER(S):</h1>
           {winners.map((winner, index) =>
-            <div className='row thin winner' key={index}>
+            <div className='noPadding row' key={index}>
               <div className='rowNumber'>{index + 1}.</div>
               <div
                 className={isDisplayingCopied[winner] ? 'accentBackground' : 'accentColor'}
                 onClick={() => handleCopyWinner(winner)}
               >
-                {isDisplayingCopied[winner] ? 'Copied!' : winner}
+                <div className='winner'>{isDisplayingCopied[winner] ? 'Copied!' : winner}</div>
               </div>
             </div>
           )}
         </div>
       }
-      <span>
+      <div className='row'>
         Winners to Choose:
-        <input className='winnerCount' onChange={handleWinnerCountChange} type='number' value={numberOfWinners}
-        />
-      </span>
-      <div className='buttonRow'>
+        <input className='winnerCountInput' min='1' onChange={handleWinnerCountChange} type='number' value={numberOfWinners}/>
+      </div>
+      <div>
         <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
         <button onClick={clearWinners}>CLEAR WINNERS</button>
       </div>
@@ -226,7 +228,7 @@ export default function Home () {
         <input onChange={handleDisplayChange} type='radio' name='filterChatterType' id='nonSubsOnly' value='nonSubsOnly' checked={currentlyDisplaying === 'nonSubsOnly'} />
         <label htmlFor='nonSubsOnly'>Non-Subs Only</label>
       </div>
-      <div className='buttonRow'>
+      <div>
         <button onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
@@ -236,9 +238,10 @@ export default function Home () {
           || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
           || (currentlyDisplaying === 'allChatters')
         ).map((chatter, index) => (
-            <div className={`row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+            <div className={`noPadding row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+              <div className='rowNumber'>{index + 1}.</div>
               <div className='username'>{chatter.username}</div>
-              <div>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+              <div className='subStatus'>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
             </div>
           )
         )}
@@ -256,39 +259,45 @@ export default function Home () {
           display: flex;
           flex-direction: column;
           font-size: 1.4rem;
+          margin: 0 auto;
           min-height: 100vh;
           text-align: center;
-        }
-        .buttonRow {
-          display: flex;
-          justify-content: center;
-          width: 40rem;
+          max-width: 40rem;
         }
         .row {
           align-items: center;
           display: flex;
-          justify-content: space-evenly;
+          justify-content: center;
+          padding: 0.5rem 0;
           text-align: left;
-          width: 40rem;
+          width: 100%;
         }
         .rowNumber {
           align-self: left;
-          flex-grow: 1;
+          flex: 1;
+          margin-right: 2rem;
           width: 3rem;
         }
-        .thin {
-          width: 30rem;
+        .subStatus {
+          text-align: right;
+          width: 100%;
         }
         .username {
-          flex-grow: 1;
-          margin-left: 2rem;
+          text-align: left;
+          width: 100%;
         }
         .winner {
           font-size: 1.6rem;
+          padding: 0.5rem;
         }
-        .winnerCount {
-          border-radius: 0;
-          width: 5rem;
+        .winnerCountInput {
+          border-radius: 10%;
+          margin-left: 0.5rem;
+          padding: 0.5rem;
+          width: 3.5rem;
+        }
+        .noPadding {
+          padding: 0;
         }
       `}</style>
       <style jsx global>{`
@@ -309,8 +318,9 @@ export default function Home () {
           cursor: pointer;
           font-size: 1.2rem;
           font-weight: 600;
-          margin: 1rem;
+          margin: 1rem 0.5rem;
           padding: 1.5rem;
+          width: 15rem;
         }
         input {
           -webkit-appearance: none;
@@ -320,32 +330,30 @@ export default function Home () {
           border-radius: 50%;
           cursor: pointer;
           height: 1.5rem;
-          margin: 1rem;
-          padding: 0.5rem;
+          margin: 0;
+          padding: 0rem;
           width: 1.5rem;
         }
         input:checked {
           border: 0.5rem solid ${accentColor};
         }
-        /* Chrome, Safari, Edge, Opera */
-          input::-webkit-outer-spin-button,
-          input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-          }
-
-          /* Firefox */
-          input[type=number] {
-            -moz-appearance: textfield;
-          }
         h1 {
-          margin: 0;
+          margin: 1rem 0 1rem 0;
+        }
+        h1:first-of-type {
+          margin: 0 0 1rem 0;
         }
         h2 {
           font-size: 1.4rem;
           font-weight: 400;
           padding: 0.5rem 0;
           margin: 0;
+        }
+        label {
+          padding: 0 2rem 0 1rem;
+        }
+        label:last-of-type {
+          padding: 0 0 0 1rem;
         }
       `}</style>
     </div>
