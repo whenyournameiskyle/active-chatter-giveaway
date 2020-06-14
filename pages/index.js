@@ -5,6 +5,7 @@ import TwitchJs from 'twitch-js'
 const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
 // end environment variables
 const accentColor = isDevelopment ? 'deeppink' : '#4700ff'
+const black = '#0e0e0e'
 const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
   'AnEternalEnigma': true,
@@ -185,7 +186,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.4.1</title></Head>
+      <Head><title>Active Chatter List v3.4.2</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -196,7 +197,7 @@ export default function Home () {
         <label htmlFor='nonSubsOnlyWinner'>Non-Subs Only</label>
       </div>
       {!!winners.length &&
-        <div>
+        <div className='fullWidth'>
           <h1>WINNER(S):</h1>
           {winners.map((winner, index) =>
             <div className='noPadding row' key={index}>
@@ -215,7 +216,7 @@ export default function Home () {
         Winners to Choose:
         <input className='winnerCountInput' min='1' onChange={handleWinnerCountChange} type='number' value={numberOfWinners}/>
       </div>
-      <div>
+      <div className='buttonRow'>
         <button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </button>
         <button onClick={clearWinners}>CLEAR WINNERS</button>
       </div>
@@ -228,31 +229,32 @@ export default function Home () {
         <input onChange={handleDisplayChange} type='radio' name='filterChatterType' id='nonSubsOnly' value='nonSubsOnly' checked={currentlyDisplaying === 'nonSubsOnly'} />
         <label htmlFor='nonSubsOnly'>Non-Subs Only</label>
       </div>
-      <div>
+      <div className='buttonRow'>
         <button onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</button>
         <button onClick={clearChatters}>CLEAR CHATTERS</button>
       </div>
-      <div>
-        {Object.values(recordedChattersState).filter((chatter) =>
-          (currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
-          || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
-          || (currentlyDisplaying === 'allChatters')
+      {Object.values(recordedChattersState).filter((chatter) =>
+        (currentlyDisplaying === 'subsOnly' && chatter.isUserSubbed)
+        || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
+        || (currentlyDisplaying === 'allChatters')
         ).map((chatter, index) => (
-            <div className={`noPadding row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
-              <div className='rowNumber'>{index + 1}.</div>
-              <div className='username'>{chatter.username}</div>
-              <div className='subStatus'>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
-            </div>
-          )
-        )}
-      </div>
+          <div className={`noPadding highlight row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+            <div className='username'>{chatter.username}</div>
+            <div className='subStatus'>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+          </div>
+        )
+      )}
       <style jsx>{`
         .accentBackground {
           background-color: ${accentColor};
-          color: black;
+          color: ${black};
         }
         .accentColor {
           color: ${accentColor};
+        }
+        .buttonRow {
+          display: flex;
+          width: 100%;
         }
         .container {
           align-items: center;
@@ -262,15 +264,20 @@ export default function Home () {
           margin: 0 auto;
           min-height: 100vh;
           text-align: center;
-          max-width: 40rem;
+          max-width: 36rem;
         }
         .row {
           align-items: center;
           display: flex;
+          font-size: 1.4rem;
           justify-content: center;
-          padding: 0.5rem 0;
+          padding: 1rem 0;
           text-align: left;
           width: 100%;
+        }
+        .highlight:hover {
+          background-color: ${accentColor};
+          color: ${black};
         }
         .rowNumber {
           align-self: left;
@@ -287,22 +294,29 @@ export default function Home () {
           width: 100%;
         }
         .winner {
+          cursor: pointer;
           font-size: 1.6rem;
           padding: 0.5rem;
         }
         .winnerCountInput {
+          background-color: ;
+          border: none;
           border-radius: 10%;
           margin-left: 0.5rem;
           padding: 0.5rem;
+          text-align: center;
           width: 3.5rem;
         }
         .noPadding {
           padding: 0;
         }
+        .fullWidth {
+          width: 100%;
+        }
       `}</style>
       <style jsx global>{`
         body, html {
-          background: black;
+          background: ${black};
           color: white;
           font-size: 10px;
           margin: 0;
@@ -314,13 +328,16 @@ export default function Home () {
         button {
           background-color: ${accentColor};
           border: none;
-          color: black;
+          color: ${black};
           cursor: pointer;
           font-size: 1.2rem;
           font-weight: 600;
-          margin: 1rem 0.5rem;
+          margin: 1rem 0;
           padding: 1.5rem;
-          width: 15rem;
+          width: 100%;
+        }
+        button:first-of-type {
+          margin-right: 2rem;
         }
         input {
           -webkit-appearance: none;
