@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import TwitchJs from 'twitch-js'
+import { MersenneTwister19937, Random } from 'random-js'
 // start environment variables
 const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
 // end environment variables
@@ -124,17 +125,9 @@ export default function Home () {
     return setIsSelectingWinner(false)
   }
   const fetchWinner = (max) => {
-    return fetch(`https://www.random.org/integers/?num=1&min=0&max=${max}&col=1&base=10&format=plain`,
-    {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => response.text())
-    .then(async data => {
-      return parseInt(data)
-    })
+    const random = new Random(MersenneTwister19937.autoSeed())
+    const integer = random.integer(0, max)
+    return integer
   }
   // end handle choose winner
   // start api check is sub
@@ -186,7 +179,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v3.4.2</title></Head>
+      <Head><title>Active Chatter List v4.0.0</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
