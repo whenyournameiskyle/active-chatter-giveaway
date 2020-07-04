@@ -7,6 +7,8 @@ const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
 // end environment variables
 const accentColor = isDevelopment ? 'deeppink' : '#4700ff'
 const black = '#0e0e0e'
+const gold = '#FAC748' // mods and vips
+const pink = '#ff5090'
 const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
   'AnEternalEnigma': true,
@@ -45,9 +47,17 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags }) => {
-      const { badges, displayName, subscriber, userId } = tags
-      const isUserSubbed = parseInt(subscriber) || !!badges?.founder
-      updateRecordedChatters(isUserSubbed, displayName, userId)
+      const { badges, displayName, userId } = tags
+      const isUserSubbed = !!badges?.subscriber
+      let accentClass = ''
+      if (!!badges?.founder) {
+        accentClass = 'founderColor'
+      } else if (!!badges?.vip || !!badges?.moderator) {
+        accentClass = 'modAndVIPColor'
+      } else if (!!isUserSubbed) {
+        accentClass = 'accentColor'
+      }
+      updateRecordedChatters(isUserSubbed, displayName, userId, accentClass)
     })
     chat.on(TwitchJs.Chat.Events.RESUBSCRIPTION, ({ tags }) => {
       const { displayName, userId } = tags
@@ -79,10 +89,10 @@ export default function Home () {
     // end restore localStorage
   }, [])
   // end handle on mount with useEffect hook
-  const updateRecordedChatters = (isUserSubbed, username, userId) => {
+  const updateRecordedChatters = (isUserSubbed, username, userId, accentClass) => {
     if (isRecording && !ignoredUsers[username]) {
       const lowercaseUsername = username.toLowerCase()
-      recordedChatters[lowercaseUsername] = { isUserSubbed, username, userId }
+      recordedChatters[lowercaseUsername] = { isUserSubbed, username, userId, accentClass }
       setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
       window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
     }
@@ -179,7 +189,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v4.0.0</title></Head>
+      <Head><title>Active Chatter List v4.1.0</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -231,7 +241,7 @@ export default function Home () {
         || (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed)
         || (currentlyDisplaying === 'allChatters')
         ).map((chatter, index) => (
-          <div className={`noPadding highlight row ${!!chatter.isUserSubbed && 'accentColor'}`} key={index}>
+          <div className={`noPadding highlight row ${chatter.accentClass}`} key={index}>
             <div className='username'>{chatter.username}</div>
             <div className='subStatus'>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
           </div>
@@ -305,6 +315,12 @@ export default function Home () {
         }
         .fullWidth {
           width: 100%;
+        }
+        .modAndVIPColor {
+          color: ${gold};
+        }
+        .founderColor {
+          color: ${pink};
         }
       `}</style>
       <style jsx global>{`
