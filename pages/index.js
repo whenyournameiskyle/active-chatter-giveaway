@@ -54,7 +54,7 @@ export default function Home () {
         accentClass = 'founderColor'
       } else if (!!badges?.vip || !!badges?.moderator) {
         accentClass = 'modAndVIPColor'
-      } else if (!!isUserSubbed) {
+      } else if (isUserSubbed) {
         accentClass = 'accentColor'
       }
       updateRecordedChatters(isUserSubbed, displayName, userId, accentClass)
@@ -161,10 +161,10 @@ export default function Home () {
   }
   const clearChatters = () => {
     if (window.confirm('Do you really want to clear all chatters?')) {
+      window.localStorage.removeItem('recordedChattersBackup')
       recordedChatters = {}
       setRecordedChatters({})
       setWinners([])
-      window.localStorage.removeItem('recordedChattersBackup')
     }
   }
   const handleCopyWinner = (username) => {
@@ -243,7 +243,7 @@ export default function Home () {
         ).map((chatter, index) => (
           <div className={`noPadding highlight row ${chatter.accentClass}`} key={index}>
             <div className='username'>{chatter.username}</div>
-            <div className='subStatus'>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
+            <div className={`subStatus ${chatter.accentClass}`}>{!!chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</div>
           </div>
         )
       )}
