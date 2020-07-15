@@ -7,7 +7,7 @@ const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
 // end environment variables
 const accentColor = isDevelopment ? 'orangered' : '#4700ff'
 const black = '#0e0e0e'
-const modAndVIPColor = '#FAC748' // mods and vips
+const modAndVIPColor = '#fac748'
 const founderColor = '#ff5090'
 const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
@@ -50,9 +50,9 @@ export default function Home () {
       const { badges, displayName, subscriber, userId } = tags
       const isUserSubbed = !!badges?.subscriber || !!badges?.founder || !!parseInt(subscriber)
       let accentClass = ''
-      if (!!badges?.founder) {
+      if (badges?.founder) {
         accentClass = 'founderColor'
-      } else if (!!badges?.vip || !!badges?.moderator) {
+      } else if (badges?.vip || badges?.moderator) {
         accentClass = 'modAndVIPColor'
       } else if (isUserSubbed) {
         accentClass = 'accentColor'
@@ -89,9 +89,12 @@ export default function Home () {
     // end restore localStorage
   }, [])
   // end handle on mount with useEffect hook
-  const updateRecordedChatters = (isUserSubbed, username, userId, accentClass) => {
+  const updateRecordedChatters = (isUserSubbed, username, userId, accentClass = '') => {
     if (isRecording && !ignoredUsers[username]) {
       const lowercaseUsername = username.toLowerCase()
+      if (!accentClass && isUserSubbed) {
+        accentClass = 'accentColor'
+      }
       recordedChatters[lowercaseUsername] = { isUserSubbed, username, userId, accentClass }
       setRecordedChatters(prevObject => ({...prevObject, ...recordedChatters}))
       window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
