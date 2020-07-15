@@ -5,10 +5,10 @@ import { MersenneTwister19937, Random } from 'random-js'
 // start environment variables
 const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
 // end environment variables
-const accentColor = isDevelopment ? 'deeppink' : '#4700ff'
+const accentColor = isDevelopment ? 'orangered' : '#4700ff'
 const black = '#0e0e0e'
-const gold = '#FAC748' // mods and vips
-const pink = '#ff5090'
+const modAndVIPColor = '#FAC748' // mods and vips
+const founderColor = '#ff5090'
 const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 const ignoredUsers = {
   'AnEternalEnigma': true,
@@ -47,8 +47,8 @@ export default function Home () {
     chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
     chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags }) => {
-      const { badges, displayName, userId } = tags
-      const isUserSubbed = !!badges?.subscriber
+      const { badges, displayName, subscriber, userId } = tags
+      const isUserSubbed = !!badges?.subscriber || !!badges?.founder || !!parseInt(subscriber)
       let accentClass = ''
       if (!!badges?.founder) {
         accentClass = 'founderColor'
@@ -189,7 +189,7 @@ export default function Home () {
   }
   return (
     <div className='container'>
-      <Head><title>Active Chatter List v4.1.0</title></Head>
+      <Head><title>Active Chatter List v4.1.1</title></Head>
       <h1>Choose Winner From:</h1>
       <div className='row' >
         <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
@@ -317,10 +317,10 @@ export default function Home () {
           width: 100%;
         }
         .modAndVIPColor {
-          color: ${gold};
+          color: ${modAndVIPColor};
         }
         .founderColor {
-          color: ${pink};
+          color: ${founderColor};
         }
       `}</style>
       <style jsx global>{`
