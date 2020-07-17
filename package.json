@@ -1,18 +1,28 @@
 {
   "name": "active-chatter-giveaway",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "deploy": "now --prod",
     "predeploy": "npm run build",
-    "start": "next start"
+    "start": "next start",
+    "test": "standard"
   },
   "dependencies": {
-    "next": "9.4.0",
+    "@emotion/core": "^10.0.28",
+    "@emotion/styled": "^10.0.27",
+    "emotion": "^10.0.27",
+    "emotion-server": "^10.0.27",
+    "next": "^9.4.4",
+    "random-js": "^2.1.0",
     "react": "16.13.1",
     "react-dom": "16.13.1",
     "twitch-js": "^2.0.0-beta.33"
+  },
+  "devDependencies": {
+    "babel-plugin-emotion": "^10.0.33",
+    "standard": "^14.3.4"
   }
 }
