@@ -1,20 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
-import TwitchJs from 'twitch-js'
+import { Events } from 'twitch-js'
 import { MersenneTwister19937, Random } from 'random-js'
 import styled from '@emotion/styled'
 import { accentColor, black, founderColor, modAndVIPColor } from '../shared/styles.js'
 import { baseChannel, ignoredUsers, isDevelopment } from '../shared/constants.js'
+import { api, chat } from '../shared/twitch-clients.js'
 let recordedChatters = { }
 let isRecording = !!isDevelopment
-// start initialize Twitch Clients
-const { chat } = new TwitchJs({ log: { level: 'silent' } })
-const { api } = new TwitchJs({
-  log: { level: 'error' },
-  clientId: '',
-  token: ''
-})
-// end initialize Twitch Clients
 export default function Home () {
   // start state hooks
   const [currentlyDisplaying, setIsCurrentlyDisplaying] = useState('allChatters')
@@ -28,10 +21,18 @@ export default function Home () {
   // end state hooks
   // start handle on mount with useEffect hook
   useEffect(() => {
+    // start restore localStorage
+    const restored = window.localStorage.getItem('recordedChattersBackup')
+    if (restored) {
+      const parsedRestored = JSON.parse(restored)
+      recordedChatters = parsedRestored
+      setRecordedChatters(prevObject => ({ ...prevObject, ...parsedRestored }))
+    }
+    // end restore localStorage
     chat.removeAllListeners()
-    chat.on(TwitchJs.Chat.Events.PARSE_ERROR_ENCOUNTERED, () => {})
+    chat.on(Events.PARSE_ERROR_ENCOUNTERED, () => {})
     chat.connect().then(() => chat.join(baseChannel.username))
-    chat.on(TwitchJs.Chat.Events.PRIVATE_MESSAGE, ({ tags }) => {
+    chat.on(Events.PRIVATE_MESSAGE, ({ tags }) => {
       const { badges, displayName, subscriber, userId } = tags
       const isUserSubbed = !!badges?.subscriber || !!badges?.founder || !!parseInt(subscriber)
       let color = 'white'
@@ -44,34 +45,26 @@ export default function Home () {
       }
       updateRecordedChatters(isUserSubbed, displayName, userId, color)
     })
-    chat.on(TwitchJs.Chat.Events.RESUBSCRIPTION, ({ tags }) => {
+    chat.on(Events.RESUBSCRIPTION, ({ tags }) => {
       const { displayName, userId } = tags
       updateRecordedChatters(true, displayName, userId)
     })
-    chat.on(TwitchJs.Chat.Events.SUBSCRIPTION, ({ tags }) => {
+    chat.on(Events.SUBSCRIPTION, ({ tags }) => {
       const { displayName, userId } = tags
       updateRecordedChatters(true, displayName, userId)
     })
-    chat.on(TwitchJs.Chat.Events.SUBSCRIPTION_GIFT, ({ tags }) => {
+    chat.on(Events.SUBSCRIPTION_GIFT, ({ tags }) => {
       const { msgParamRecipientDisplayName, msgParamRecipientId } = tags
       if (recordedChatters[msgParamRecipientDisplayName.toLowerCase()]) {
         updateRecordedChatters(true, msgParamRecipientDisplayName, msgParamRecipientId)
       }
     })
-    chat.on(TwitchJs.Chat.Events.USER_BANNED, ({ username }) => {
+    chat.on(Events.USER_BANNED, ({ username }) => {
       ignoredUsers[username] = true
       delete recordedChatters[username]
       setRecordedChatters(() => ({ ...recordedChatters }))
       window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
     })
-    // start restore localStorage
-    const restored = window.localStorage.getItem('recordedChattersBackup')
-    if (restored) {
-      const parsedRestored = JSON.parse(restored)
-      recordedChatters = parsedRestored
-      setRecordedChatters(prevObject => ({ ...prevObject, ...parsedRestored }))
-    }
-    // end restore localStorage
   }, [])
   // end handle on mount with useEffect hook
   const updateRecordedChatters = (isUserSubbed, username, userId, color = '') => {
@@ -85,8 +78,8 @@ export default function Home () {
       window.localStorage.setItem('recordedChattersBackup', JSON.stringify(recordedChatters))
     }
   }
-  let count = 0
   // start handle choose winner
+  let count = 0
   const getWinner = async () => {
     setIsSelectingWinner(true)
     const chatterObjects = {
@@ -228,7 +221,7 @@ export default function Home () {
         (currentlyDisplaying === 'nonSubsOnly' && !chatter.isUserSubbed) ||
         (currentlyDisplaying === 'allChatters')
       ).map((chatter, index) => (
-        <Row thin color={chatter.color} key={index}>
+        <Row color={chatter.color} key={index} thin>
           <UsernameDisplay>{chatter.username}</UsernameDisplay>
           <SubbedStatus>{chatter.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</SubbedStatus>
         </Row>
@@ -306,7 +299,6 @@ const Button = styled.button`
   }
 `
 const WinnerCountInput = styled.input`
-  background-color: ;
   border: none;
   border-radius: 10%;
   margin-left: 0.5rem;

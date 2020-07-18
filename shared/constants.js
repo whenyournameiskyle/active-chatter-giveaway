@@ -9,4 +9,4 @@ export const ignoredUsers = {
   nightbot: true,
   Nightbot: true
 }
-export const isDevelopment = process.env.NEXT_PUBLIC_ENVIRONMENT === 'development'
+export const isDevelopment = process.env.NODE_ENV === 'development'
