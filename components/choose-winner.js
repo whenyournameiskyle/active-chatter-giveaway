@@ -1,10 +1,9 @@
 import styled from '@emotion/styled'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { MersenneTwister19937, Random } from 'random-js'
-import { Button, ButtonRow, InputRow, Row, RowNumber } from '../shared/styled-components.js'
+import { Button, ButtonRow, ConfigContainer, InputRow, JustifyCenter, Row, RowNumber } from '../shared/styled-components.js'
 
-export default function ChooseWinners ({ checkIsSub, recordedChatters, updateRecordedChatters }) {
-  const [chooseWinnerFrom, setChooseWinnerFrom] = useState('nonSubsOnly')
+export default React.memo(function ChooseWinners ({ chooseWinnerFrom, selectedChatterArray, setChooseWinnerFrom, updateRecordedChatters }) {
   const [isDisplayingCopied, setIsDisplayingCopied] = useState({})
   const [isSelectingWinner, setIsSelectingWinner] = useState(false)
   const [numberOfWinners, setNumberOfWinners] = useState('1')
@@ -29,14 +28,11 @@ export default function ChooseWinners ({ checkIsSub, recordedChatters, updateRec
   }
   // start handle choose winner
   let count = 0
+  let tries = 0
   const getWinner = async () => {
+    tries += 1
+    if (tries >= 25) return
     setIsSelectingWinner(true)
-    const chatterObjects = {
-      allChatters: Object.values(recordedChatters),
-      nonSubsOnly: Object.values(recordedChatters).filter(chatter => !chatter.isUserSubbed),
-      subsOnly: Object.values(recordedChatters).filter(chatter => !!chatter.isUserSubbed)
-    }
-    const selectedChatterArray = chatterObjects[chooseWinnerFrom]
     const numberOfChatters = selectedChatterArray.length
     if (!numberOfChatters) return setIsSelectingWinner(false)
     if (numberOfChatters < 2) {
@@ -45,13 +41,7 @@ export default function ChooseWinners ({ checkIsSub, recordedChatters, updateRec
     }
     const potentialWinnerIndex = await fetchWinner(numberOfChatters - 1)
     const potentialWinner = (selectedChatterArray[potentialWinnerIndex])
-    if (chooseWinnerFrom === 'nonSubsOnly') {
-      const isUserSubbed = await checkIsSub(potentialWinner.userId)
-      if (isUserSubbed) {
-        updateRecordedChatters(isUserSubbed, potentialWinner.username, potentialWinner.userId)
-        return getWinner()
-      }
-    }
+
     setWinners((previousWinners) => {
       if (previousWinners.includes(potentialWinner.username)) {
         return [...previousWinners]
@@ -72,41 +62,45 @@ export default function ChooseWinners ({ checkIsSub, recordedChatters, updateRec
   // end handle choose winner
   return (
     <div>
-      <h1>Choose Winner From:</h1>
-      <InputRow>
-        <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
-        <label htmlFor='allChattersWinner'>All Chatters</label>
-        <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='subsOnlyWinner' value='subsOnly' checked={chooseWinnerFrom === 'subsOnly'} />
-        <label htmlFor='subsOnlyWinner'>Subs Only</label>
-        <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='nonSubsOnlyWinner' value='nonSubsOnly' checked={chooseWinnerFrom === 'nonSubsOnly'} />
-        <label htmlFor='nonSubsOnlyWinner'>Non-Subs Only</label>
-      </InputRow>
-      {!!winners.length && <h1>WINNER(S):</h1>}
-      {!!winners.length &&
-        winners.map((winner, index) => {
-          const wasCopied = !!isDisplayingCopied[winner]
-          return (
-            <Row key={index} onClick={() => handleCopyWinner(winner)}>
-              <RowNumber>{index + 1}.</RowNumber>
-              <div>{wasCopied ? 'Copied!' : winner}</div>
-            </Row>
-          )
-        })}
-      <InputRow>
-        Winners to Choose:
-        <WinnerCountInput min='1' onChange={handleWinnerCountChange} type='number' value={numberOfWinners} />
-      </InputRow>
+      <ConfigContainer>
+        <h1>Choose Winner From:</h1>
+        <h2>Winners to Choose:</h2>
+        <JustifyCenter>
+          <WinnerCountInput min='1' onChange={handleWinnerCountChange} type='number' value={numberOfWinners} />
+        </JustifyCenter>
+        <h2>Select Winner From:</h2>
+        <InputRow>
+          <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='allChattersWinner' value='allChatters' checked={chooseWinnerFrom === 'allChatters'} />
+          <label htmlFor='allChattersWinner'>All Chatters</label>
+          <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='subsOnlyWinner' value='subsOnly' checked={chooseWinnerFrom === 'subsOnly'} />
+          <label htmlFor='subsOnlyWinner'>Subs Only</label>
+          <input onChange={handleWinnerChange} type='radio' name='filterPotentialWinner' id='nonSubsOnlyWinner' value='nonSubsOnly' checked={chooseWinnerFrom === 'nonSubsOnly'} />
+          <label htmlFor='nonSubsOnlyWinner'>Non-Subs Only</label>
+        </InputRow>
+      </ConfigContainer>
       <ButtonRow>
-        <Button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'CHOOSING...' : 'CHOOSE WINNER(S)'} </Button>
+        <Button disabled={!!isSelectingWinner} onClick={getWinner}>{isSelectingWinner ? 'PICKING...' : 'PICK WINNER(S)'} </Button>
         <Button onClick={clearWinners}>CLEAR WINNERS</Button>
       </ButtonRow>
+      {!!winners.length && <h1>Winner(s):</h1>}
+      {!!winners.length &&
+      winners.map((winner, index) => {
+        const wasCopied = !!isDisplayingCopied[winner]
+        return (
+          <Row key={index} onClick={() => handleCopyWinner(winner)}>
+            <RowNumber>{index + 1}.</RowNumber>
+            <div>{wasCopied ? 'Copied!' : winner}</div>
+          </Row>
+        )
+      })}
     </div>
   )
-}
+})
+
 const WinnerCountInput = styled.input`
   border: none;
   border-radius: 10%;
-  margin-left: 0.5rem;
+  margin-bottom: 0.5rem;
   padding: 0.5rem;
   text-align: center;
   width: 3.5rem;

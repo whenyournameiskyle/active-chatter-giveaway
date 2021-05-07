@@ -1,12 +1,11 @@
-export const baseChannel = { userId: '20485198', username: 'AnEternalEnigma' }
 export const ignoredUsers = {
-  AnEternalEnigma: true,
-  AnAnonymousCheerer: true,
-  AnEternalBot: true,
-  StreamElements: true,
-  moobot: true,
-  Moobot: true,
-  nightbot: true,
-  Nightbot: true
+  aneternalenigma: 1,
+  ananonymouscheerer: 1,
+  ananonymousgifter: 1,
+  aneternalbot: 1,
+  streamelements: 1,
+  moobot: 1,
+  nightbot: 1,
+  tobeornottobot: 1
 }
 export const isDevelopment = process.env.NODE_ENV === 'development'

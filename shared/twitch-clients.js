@@ -1,8 +1,11 @@
-import TwitchJs from 'twitch-js'
+import TwitchJs, { Events } from 'twitch-js'
 
-export const { chat } = new TwitchJs({ log: { level: 'silent' } })
-export const { api } = new TwitchJs({
-  log: { level: 'error' },
-  clientId: '',
-  token: ''
-})
+const { chat } = new TwitchJs({ log: { level: 'silent' } })
+chat.on(Events.PARSE_ERROR_ENCOUNTERED, () => {})
+chat.removeAllListeners()
+chat.connect()
+  .then(() => {
+    console.info('Connected to Twitch!')
+  })
+  .catch(e => console.error(`Error connecting to Twitch! ${e}`))
+export { chat }

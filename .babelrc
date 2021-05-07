@@ -2,11 +2,11 @@
   "env": {
     "production": {
       "presets": ["next/babel"],
-      "plugins": ["emotion"]
+      "plugins": ["@emotion"]
     },
     "development": {
       "presets": ["next/babel"],
-      "plugins": [["emotion", { "sourceMap": true }]]
+      "plugins": [["@emotion", { "sourceMap": true }]]
     }
   }
 }
