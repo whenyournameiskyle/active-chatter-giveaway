@@ -32,6 +32,9 @@ export const ButtonRow = styled.div`
 `
 
 export const ConfigContainer = styled.div`
+  @media only screen and (max-width: 600px) {
+    height: auto;
+  }
   height: 15rem;
   display: flex;
   flex-direction: column;

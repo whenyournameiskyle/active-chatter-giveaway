@@ -178,6 +178,14 @@ export default function Home () {
         <title>Active Chatter Giveaway</title>
       </Head>
       <Left>
+        <ChooseWinner
+          chooseWinnerFrom={chooseWinnerFrom}
+          selectedChatterArray={getFiltered(Object.values(recordedChattersState), chooseWinnerFrom)}
+          setChooseWinnerFrom={setChooseWinnerFrom}
+          updateRecordedChatters={updateRecordedChatters}
+        />
+      </Left>
+      <Right>
         <ConfigContainer>
           <h1>Record{isRecordingState && channelToRecord ? 'ing' : ''} Chatters In</h1>
           <h2>Channel:</h2>
@@ -213,36 +221,40 @@ export default function Home () {
           </Row>
         )
         )}
-      </Left>
-      <Right>
-        <ChooseWinner
-          chooseWinnerFrom={chooseWinnerFrom}
-          selectedChatterArray={getFiltered(Object.values(recordedChattersState), chooseWinnerFrom)}
-          setChooseWinnerFrom={setChooseWinnerFrom}
-          updateRecordedChatters={updateRecordedChatters}
-        />
+
       </Right>
     </Container>
   )
 }
 
 const Container = styled.div`
-    align-items: center;
-    display: flex;
-    font-size: 1.4rem;
-    justify-content: center;
-    text-align: center;
+  align-items: center;
+  display: flex;
+  font-size: 1.4rem;
+  justify-content: center;
+  text-align: center;
+  @media only screen and (max-width: 600px) {
+    flex-direction: column;
+  }
 `
 
 const Left = styled.div`
-    margin-bottom: auto;
-    padding: 0 5rem;
+  margin-bottom: auto;
+  padding: 0 5rem;
+
+  @media only screen and (max-width: 600px) {
+    padding: 0;
+  }
 `
 
 const Right = styled.div`
-    flex-direction: column;
-    margin-bottom: auto;
-    padding: 0 5rem;
+  flex-direction: column;
+  margin-bottom: auto;
+  padding: 0 5rem;
+
+  @media only screen and (max-width: 600px) {
+    padding: 1rem 0;
+  }
 `
 
 const ChannelNameInput = styled.input`
