@@ -22,7 +22,9 @@ export default class MyDocument extends Document {
   render () {
     return (
       <Html>
-        <Head />
+        <Head>
+          <script async src='https://www.googletagmanager.com/gtag/js?id=G-J8VJ5R14TS'></script>
+        </Head>
         <body>
           <Main />
           <NextScript />

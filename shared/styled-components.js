@@ -21,8 +21,16 @@ export const Button = styled.button`
   padding: 1.5rem;
   width: 100%;
 
+  @media only screen and (max-width: 600px) {
+    margin: 0.25rem 0;
+
+    &:first-of-type {
+      margin-right: 0.25rem;
+    }
+  }
+
   &:first-of-type {
-    margin-right: 2rem;
+    margin-right: 1rem;
   }
 `
 

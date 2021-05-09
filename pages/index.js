@@ -17,6 +17,7 @@ export default function Home () {
   const [chooseWinnerFrom, setChooseWinnerFrom] = useState('nonSubsOnly')
   const [currentlyDisplaying, setIsCurrentlyDisplaying] = useState('allChatters')
   const [isRecordingState, setIsRecordingState] = useState(isRecording)
+  const [selectedTab, setSelectedTab] = useState('chatters')
   const [sortKey, setSortKey] = useState('')
   const [recordedChattersState, setRecordedChatters] = useState({})
   useEffect(() => {
@@ -66,6 +67,16 @@ export default function Home () {
       }
     }
     // end restore sessionStorage
+    window.dataLayer = window.dataLayer || []
+    function gtag () {
+      window.dataLayer.push(arguments)
+    }
+    gtag('js', new Date())
+    gtag('config', 'G-J8VJ5R14TS', {
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+      page_title: window.document.title
+    })
   }, [])
 
   const updateRecordedChatters = (isUserSubbed, username, userId, badges) => {
@@ -125,7 +136,6 @@ export default function Home () {
           chat.part(channel)
         }
         if (newChannel === channel) {
-          console.log('AH!, this should rarely happen I think?')
           quickExit = true
         }
       })
@@ -150,6 +160,10 @@ export default function Home () {
       })
   }
 
+  const handleChooseTab = (value) => {
+    setSelectedTab(value)
+  }
+
   const handleKeyPress = (e) => {
     if (e.charCode === 13) {
       handleJoinNewChannel(e?.target?.value)
@@ -166,6 +180,7 @@ export default function Home () {
         return arrayToFilter
     }
   }
+
   const getSorted = (arrayToSort) => {
     if (!sortKey) return arrayToSort
     if (sortKey === 'username') return arrayToSort.sort((a, b) => a[sortKey].localeCompare(b[sortKey]))
@@ -177,15 +192,15 @@ export default function Home () {
       <Head>
         <title>Active Chatter Giveaway</title>
       </Head>
-      <Left>
-        <ChooseWinner
-          chooseWinnerFrom={chooseWinnerFrom}
-          selectedChatterArray={getFiltered(Object.values(recordedChattersState), chooseWinnerFrom)}
-          setChooseWinnerFrom={setChooseWinnerFrom}
-          updateRecordedChatters={updateRecordedChatters}
-        />
-      </Left>
-      <Right>
+      <Tabs>
+        <Tab isSelected={selectedTab === 'chatters'} onClick={() => handleChooseTab('chatters')}>
+          Chatter List
+        </Tab>
+        <Tab isSelected={selectedTab === 'winners'} onClick={() => handleChooseTab('winners')}>
+          Choose Winner
+        </Tab>
+      </Tabs>
+      <Left isSelected={selectedTab === 'chatters'} >
         <ConfigContainer>
           <h1>Record{isRecordingState && channelToRecord ? 'ing' : ''} Chatters In</h1>
           <h2>Channel:</h2>
@@ -203,7 +218,7 @@ export default function Home () {
           </InputRow>
         </ConfigContainer>
         <ButtonRow>
-          <Button color={isRecordingState ? 'red' : ''} disabled={!channelToRecord} onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP' : 'START'} RECORDING</Button>
+          <Button color={isRecordingState ? 'red' : ''} disabled={!channelToRecord} onClick={handleToggleIsRecording}>{isRecordingState ? 'STOP RECORDING' : 'RECORD'}</Button>
           <Button onClick={handleClearChatters}>CLEAR CHATTERS</Button>
         </ButtonRow>
         <Row>
@@ -219,18 +234,34 @@ export default function Home () {
             <div>{user.count}</div>
             <AlignRight width='12rem'>{user.isUserSubbed ? 'Subbed!' : 'Not Subbed!'}</AlignRight>
           </Row>
-        )
-        )}
-
+        ))}
+      </Left>
+      <Right isSelected={selectedTab === 'winners'} >
+        <ChooseWinner
+          chooseWinnerFrom={chooseWinnerFrom}
+          selectedChatterArray={getFiltered(Object.values(recordedChattersState), chooseWinnerFrom)}
+          setChooseWinnerFrom={setChooseWinnerFrom}
+          updateRecordedChatters={updateRecordedChatters}
+        />
       </Right>
     </Container>
   )
 }
 
+const ChannelNameInput = styled.input`
+  border: none;
+  border-radius: 10%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  text-align: center;
+  width: 90%;
+`
+
 const Container = styled.div`
   align-items: center;
   display: flex;
   font-size: 1.4rem;
+  flex: 0 0 100%;
   justify-content: center;
   text-align: center;
   @media only screen and (max-width: 600px) {
@@ -244,6 +275,7 @@ const Left = styled.div`
 
   @media only screen and (max-width: 600px) {
     padding: 0;
+    display: ${({isSelected}) => isSelected ? 'inline-block' : 'none' };
   }
 `
 
@@ -253,15 +285,22 @@ const Right = styled.div`
   padding: 0 5rem;
 
   @media only screen and (max-width: 600px) {
-    padding: 1rem 0;
+    padding: 0;
+    display: ${({isSelected}) => isSelected ? 'inline-block' : 'none' };
   }
 `
 
-const ChannelNameInput = styled.input`
-  border: none;
-  border-radius: 10%;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  text-align: center;
-  width: 90%;
+const Tab = styled.div`
+background-color: ${({isSelected}) => isSelected ? accentColor : '' };
+  border: 0.25rem solid ${accentColor};
+  width: 100%;
+`
+
+const Tabs = styled.div`
+  display: none;
+  @media only screen and (max-width: 600px) {
+    display: flex;
+    padding-bottom: 1rem;
+    width: 100%;
+  }
 `
