@@ -60,8 +60,8 @@ export const InputRow = styled.div`
 `
 
 export const JustifyCenter = styled.div`
-  justify-content: center;
   display: flex;
+  justify-content: center;
 `
 
 export const Row = styled.div`

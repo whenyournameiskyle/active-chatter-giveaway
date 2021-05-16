@@ -1,5 +1,6 @@
 import Document, { Head, Html, Main, NextScript } from 'next/document'
 import { extractCritical } from '@emotion/server'
+import { isDevelopment } from '../shared/constants.js'
 
 export default class MyDocument extends Document {
   static async getInitialProps (ctx) {
@@ -23,7 +24,7 @@ export default class MyDocument extends Document {
     return (
       <Html>
         <Head>
-          <script async src='https://www.googletagmanager.com/gtag/js?id=G-J8VJ5R14TS'></script>
+          {!isDevelopment && <script async src='https://www.googletagmanager.com/gtag/js?id=G-J8VJ5R14TS' />}
         </Head>
         <body>
           <Main />

@@ -4,16 +4,18 @@ import { useEffect, useState } from 'react'
 import TwitchJs, { Events } from 'twitch-js'
 
 import { accentColor, AlignRight, Button, ButtonRow, ConfigContainer, InputRow, JustifyCenter, Row, RowNumber, UsernameDisplay } from '../shared/styled-components.js'
-import { ignoredUsers } from '../shared/constants.js'
+import { ignoredUsers, isDevelopment } from '../shared/constants.js'
 import ChooseWinner from '../components/choose-winner.js'
 
 const { chat } = new TwitchJs({ log: { level: 'silent' } })
 
 let chatterSessionStorageTimeout, isRecording
 let recordedChatters = { }
+let wordFilter = ''
 
 export default function Home () {
   const [channelToRecord, setChannelToRecord] = useState('')
+  const [wordFilterDisplayState, setWordFilter] = useState('')
   const [chooseWinnerFrom, setChooseWinnerFrom] = useState('nonSubsOnly')
   const [currentlyDisplaying, setIsCurrentlyDisplaying] = useState('allChatters')
   const [isRecordingState, setIsRecordingState] = useState(isRecording)
@@ -28,9 +30,16 @@ export default function Home () {
       })
       .catch(e => console.error(`Error connecting to Twitch! ${e}`))
     chat.on(Events.PARSE_ERROR_ENCOUNTERED, () => {})
-    chat.on(Events.PRIVATE_MESSAGE, ({ tags }) => {
+    chat.on(Events.PRIVATE_MESSAGE, ({ message, tags }) => {
       const { badges, displayName, subscriber, userId } = tags
       if (ignoredUsers[displayName.toLowerCase()]) return
+      message = message.toLowerCase()
+      // if (!!wordFilter && !message.trim().split(' ').includes(wordFilter)) {
+      //   return
+      // }
+      if (!!wordFilter && message.trim() !== wordFilter) {
+        return
+      }
       const isUserSubbed = parseInt(subscriber) || !!badges?.subscriber || !!badges?.founder
       updateRecordedChatters(isUserSubbed, displayName, userId, badges)
     })
@@ -52,7 +61,7 @@ export default function Home () {
       ignoredUsers[username.toLowerCase()] = true
       delete recordedChatters[username]
       setRecordedChatters(() => ({ ...recordedChatters }))
-      handleSetChatterStorage(recordedChatters)
+      setChatterStorage(recordedChatters)
     })
     // start restore sessionStorage
     const restoredChannelToRecord = window.sessionStorage.getItem('channelToRecordBackup')
@@ -67,107 +76,25 @@ export default function Home () {
       }
     }
     // end restore sessionStorage
-    window.dataLayer = window.dataLayer || []
-    function gtag () {
-      window.dataLayer.push(arguments)
+    if (!isDevelopment) {
+      window.dataLayer = window.dataLayer || []
+      function gtag () {
+        window.dataLayer.push(arguments)
+      }
+      gtag('js', new Date())
+      gtag('config', 'G-J8VJ5R14TS', {
+        page_location: window.location.href,
+        page_path: window.location.pathname,
+        page_title: window.document.title
+      })
     }
-    gtag('js', new Date())
-    gtag('config', 'G-J8VJ5R14TS', {
-      page_location: window.location.href,
-      page_path: window.location.pathname,
-      page_title: window.document.title
-    })
   }, [])
 
-  const updateRecordedChatters = (isUserSubbed, username, userId, badges) => {
-    username = username.toLowerCase()
-    if (isRecording && !ignoredUsers[username]) {
-      const count = recordedChatters[username] ? recordedChatters[username].count || 0 : 0
-      recordedChatters[username] = { isUserSubbed, username, userId, badges, count: count + 1 }
-      setRecordedChatters(prevObject => ({ ...prevObject, ...recordedChatters }))
-      handleSetChatterStorage(recordedChatters)
-    }
-  }
-
-  const handleSetChatterStorage = (recordedChatters) => {
-    if (chatterSessionStorageTimeout) clearTimeout(chatterSessionStorageTimeout)
-    chatterSessionStorageTimeout = setTimeout(() => {
-      const stringified = JSON.stringify(recordedChatters)
-      window.sessionStorage.setItem('recordedChattersBackup', stringified)
-    }, 500)
-  }
-  const handleClearChatters = () => {
-    if (window.confirm('Do you really want to clear all chatters?')) {
-      clearChatters()
-    }
-  }
-
   const clearChatters = () => {
+    if (chatterSessionStorageTimeout) clearTimeout(chatterSessionStorageTimeout)
     window.sessionStorage.removeItem('recordedChattersBackup')
     recordedChatters = {}
     setRecordedChatters({})
-  }
-
-  const handleChannelToRecordChange = (e) => {
-    if (!e.target.value) return
-    setChannelToRecord(e.target.value)
-  }
-
-  const handleDisplayChange = (e) => {
-    setIsCurrentlyDisplaying(e.target.value)
-  }
-
-  const handleToggleIsRecording = () => {
-    isRecording = !isRecording
-    if (isRecording) {
-      handleJoinNewChannel(channelToRecord)
-    }
-    setIsRecordingState(!isRecordingState)
-  }
-
-  const handleJoinNewChannel = (newChannel) => {
-    const currentChannels = Object.keys(chat._channelState)
-    let quickExit = false
-
-    if (currentChannels.length) {
-      currentChannels.forEach((channel) => {
-        channel = channel.replace('#', '')
-        if (newChannel !== channel) {
-          chat.part(channel)
-        }
-        if (newChannel === channel) {
-          quickExit = true
-        }
-      })
-    }
-
-    if (quickExit) {
-      return
-    }
-
-    setChannelToRecord(newChannel)
-    clearChatters(true)
-
-    chat.join(newChannel)
-      .then(() => {
-        console.info(`Joined ${newChannel}`)
-        isRecording = true
-        setIsRecordingState(true)
-        window.sessionStorage.setItem('channelToRecordBackup', newChannel)
-      })
-      .catch(e => {
-        console.error(`Error joining ${newChannel}, ${e}`)
-      })
-  }
-
-  const handleChooseTab = (value) => {
-    setSelectedTab(value)
-  }
-
-  const handleKeyPress = (e) => {
-    if (e.charCode === 13) {
-      handleJoinNewChannel(e?.target?.value)
-    }
   }
 
   const getFiltered = (arrayToFilter, displayingOnSwitch) => {
@@ -187,6 +114,112 @@ export default function Home () {
     return arrayToSort.sort((a, b) => b[sortKey] - a[sortKey])
   }
 
+  const setChatterStorage = (recordedChatters) => {
+    if (chatterSessionStorageTimeout) clearTimeout(chatterSessionStorageTimeout)
+    chatterSessionStorageTimeout = setTimeout(() => {
+      const stringified = JSON.stringify(recordedChatters)
+      window.sessionStorage.setItem('recordedChattersBackup', stringified)
+    }, 500)
+  }
+
+  const updateRecordedChatters = (isUserSubbed, username, userId, badges) => {
+    username = username.toLowerCase()
+    if (isRecording && !ignoredUsers[username]) {
+      const count = recordedChatters[username] ? recordedChatters[username].count || 0 : 0
+      recordedChatters[username] = { isUserSubbed, username, userId, badges, count: count + 1 }
+      setRecordedChatters(prevObject => ({ ...prevObject, ...recordedChatters }))
+      setChatterStorage(recordedChatters)
+    }
+  }
+
+  const handleChannelToRecordChange = (e) => {
+    if (!e.target.value) return
+    setChannelToRecord(e.target.value)
+  }
+
+  const handleChooseTab = (value) => {
+    setSelectedTab(value)
+  }
+
+  const handleClearChatters = () => {
+    if (window.confirm('Do you really want to clear all chatters?')) {
+      clearChatters()
+    }
+  }
+
+  const handleDisplayChange = (e) => {
+    setIsCurrentlyDisplaying(e.target.value)
+  }
+
+  const handleJoinNewChannel = (newChannel) => {
+    const currentChannels = Object.keys(chat._channelState)
+    let quickExit = false
+
+    if (currentChannels.length) {
+      currentChannels.forEach((channel) => {
+        channel = channel.replace('#', '')
+        if (newChannel !== channel) {
+          chat.part(channel)
+        }
+        if (newChannel === channel) {
+          quickExit = true
+        }
+      })
+    }
+
+    if (quickExit) {
+      isRecording = true
+      setIsRecordingState(true)
+      return
+    }
+
+    setChannelToRecord(newChannel)
+    clearChatters(true)
+
+    chat.join(newChannel)
+      .then(() => {
+        console.info(`Joined ${newChannel}`)
+        isRecording = true
+        setIsRecordingState(true)
+        window.sessionStorage.setItem('channelToRecordBackup', newChannel)
+      })
+      .catch(e => {
+        console.error(`Error joining ${newChannel}, ${e}`)
+      })
+  }
+
+  const handleKeyPress = (e) => {
+    if (e.charCode === 13) {
+      const value = e.target.value.trim()
+      if (e.target.id === 'wordFilter') {
+        setWordFilter(value)
+        wordFilter = value.toLowerCase()
+        handleJoinNewChannel(channelToRecord)
+      }
+      if (e.target.id === 'channelToRecord') {
+        handleJoinNewChannel(value)
+      }
+    }
+  }
+
+  const handleToggleIsRecording = () => {
+    isRecording = !isRecording
+    if (isRecording) {
+      handleJoinNewChannel(channelToRecord)
+    }
+    setIsRecordingState(!isRecordingState)
+  }
+
+  const handleWordFilterChange = (e) => {
+    if (e?.target?.value.toLowerCase() !== wordFilter && isRecordingState) {
+      isRecording = false
+      setIsRecordingState(false)
+    }
+    const word = e?.target?.value.trim() || ''
+    setWordFilter(word)
+    wordFilter = word.toLowerCase()
+  }
+
   return (
     <Container>
       <Head>
@@ -200,12 +233,18 @@ export default function Home () {
           Choose Winner
         </Tab>
       </Tabs>
-      <Left isSelected={selectedTab === 'chatters'} >
+      <Left isSelected={selectedTab === 'chatters'}>
         <ConfigContainer>
           <h1>Record{isRecordingState && channelToRecord ? 'ing' : ''} Chatters In</h1>
-          <h2>Channel:</h2>
           <JustifyCenter>
-            <ChannelNameInput onChange={handleChannelToRecordChange} onKeyPress={handleKeyPress} type='text' value={channelToRecord} />
+            <Column margin='0.25rem'>
+              <h2>Channel:</h2>
+              <TextInput onChange={handleChannelToRecordChange} onKeyPress={handleKeyPress} id='channelToRecord' type='text' value={channelToRecord} />
+            </Column>
+            <Column>
+              <h2>Word filter:</h2>
+              <TextInput onChange={handleWordFilterChange} onKeyPress={handleKeyPress} id='wordFilter' type='text' value={wordFilterDisplayState} />
+            </Column>
           </JustifyCenter>
           <h2>Display:</h2>
           <InputRow>
@@ -236,7 +275,7 @@ export default function Home () {
           </Row>
         ))}
       </Left>
-      <Right isSelected={selectedTab === 'winners'} >
+      <Right isSelected={selectedTab === 'winners'}>
         <ChooseWinner
           chooseWinnerFrom={chooseWinnerFrom}
           selectedChatterArray={getFiltered(Object.values(recordedChattersState), chooseWinnerFrom)}
@@ -248,13 +287,9 @@ export default function Home () {
   )
 }
 
-const ChannelNameInput = styled.input`
-  border: none;
-  border-radius: 10%;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  text-align: center;
-  width: 90%;
+const Column = styled.div`
+  display: flex;
+  flex-direction: column;
 `
 
 const Container = styled.div`
@@ -275,7 +310,7 @@ const Left = styled.div`
 
   @media only screen and (max-width: 600px) {
     padding: 0;
-    display: ${({isSelected}) => isSelected ? 'inline-block' : 'none' };
+    display: ${({ isSelected }) => isSelected ? 'inline-block' : 'none'};
   }
 `
 
@@ -286,12 +321,12 @@ const Right = styled.div`
 
   @media only screen and (max-width: 600px) {
     padding: 0;
-    display: ${({isSelected}) => isSelected ? 'inline-block' : 'none' };
+    display: ${({ isSelected }) => isSelected ? 'inline-block' : 'none'};
   }
 `
 
 const Tab = styled.div`
-background-color: ${({isSelected}) => isSelected ? accentColor : '' };
+  background-color: ${({ isSelected }) => isSelected ? accentColor : ''};
   border: 0.25rem solid ${accentColor};
   width: 100%;
 `
@@ -303,4 +338,13 @@ const Tabs = styled.div`
     padding-bottom: 1rem;
     width: 100%;
   }
+`
+
+const TextInput = styled.input`
+  border: none;
+  border-radius: 10%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  text-align: center;
+  width: 90%;
 `
