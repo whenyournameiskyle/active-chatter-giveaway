@@ -133,7 +133,6 @@ export default function Home () {
   }
 
   const handleChannelToRecordChange = (e) => {
-    if (!e.target.value) return
     setChannelToRecord(e.target.value)
   }
 
